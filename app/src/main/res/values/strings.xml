@@ -192,4 +192,11 @@
     <string name="charts_weight_first">起點（公斤）</string>
     <string name="charts_weight_last">終點（公斤）</string>
     <string name="charts_macro_average">%1$s 平均（g）</string>
+
+    <!-- 當日組成 -->
+    <string name="composition_title">當日組成</string>
+    <string name="composition_macro_title">熱量來源（三大營養素換算）</string>
+    <string name="composition_meal_title">各餐分佈</string>
+    <string name="composition_no_macros">這一天的紀錄沒有營養素資料</string>
+    <string name="composition_value">%1$d 大卡 · %2$d%%</string>
 </resources>

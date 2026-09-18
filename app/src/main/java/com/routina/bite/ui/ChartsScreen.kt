@@ -76,7 +76,7 @@ private val CHART_HEIGHT = 200.dp
 private val MINI_CHART_HEIGHT = 110.dp
 
 /** 繁中不留字距：M3 的預設 letterSpacing 是給拉丁字母的，中文會看起來鬆散 */
-private fun TextStyle.zh(): TextStyle = copy(letterSpacing = 0.sp)
+fun TextStyle.zh(): TextStyle = copy(letterSpacing = 0.sp)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

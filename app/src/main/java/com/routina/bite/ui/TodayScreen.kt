@@ -132,6 +132,8 @@ fun TodayScreen(
 
             item { SummaryCard(entries = entries, targets = targets) }
 
+            item { DayCompositionCard(entries = entries) }
+
             item {
                 NoteCard(note = note, onClick = { editingNote = true })
             }

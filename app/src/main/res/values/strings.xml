@@ -218,4 +218,14 @@
     <string name="photo_thumb">紀錄照片</string>
     <string name="photo_view">看大圖</string>
     <string name="photo_failed">讀不到這張圖，請換一張試試</string>
+
+    <!-- 喝水 -->
+    <string name="water_title">喝水</string>
+    <string name="water_amount">%1$d / %2$d ml</string>
+    <string name="water_add">+%1$d</string>
+    <string name="water_undo">−%1$d</string>
+    <string name="water_custom">自訂</string>
+    <string name="water_custom_title">加入水量</string>
+    <string name="water_field">毫升</string>
+    <string name="field_target_water">喝水目標（ml）</string>
 </resources>

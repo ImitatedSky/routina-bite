@@ -7,6 +7,7 @@ import com.routina.bite.model.DiaryEntry
 import com.routina.bite.model.DiaryFile
 import com.routina.bite.model.Food
 import com.routina.bite.model.Targets
+import com.routina.bite.model.WaterDay
 import com.routina.bite.model.WeightEntry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +47,7 @@ class BiteRepository(context: Context) {
     private val foodsFile: File get() = File(appContext.filesDir, FILE_FOODS)
     private val diaryFile: File get() = File(appContext.filesDir, FILE_DIARY)
     private val weightsFile: File get() = File(appContext.filesDir, FILE_WEIGHTS)
+    private val waterFile: File get() = File(appContext.filesDir, FILE_WATER)
 
     private val _foods = MutableStateFlow<List<Food>>(emptyList())
     val foods: StateFlow<List<Food>> = _foods.asStateFlow()
@@ -58,6 +60,9 @@ class BiteRepository(context: Context) {
 
     private val _weights = MutableStateFlow<List<WeightEntry>>(emptyList())
     val weights: StateFlow<List<WeightEntry>> = _weights.asStateFlow()
+
+    private val _water = MutableStateFlow<List<WaterDay>>(emptyList())
+    val water: StateFlow<List<WaterDay>> = _water.asStateFlow()
 
     private val _targets = MutableStateFlow(Targets())
     val targets: StateFlow<Targets> = _targets.asStateFlow()
@@ -72,6 +77,7 @@ class BiteRepository(context: Context) {
         _entries.value = diary.entries
         _dayNotes.value = diary.dayNotes
         _weights.value = readList(weightsFile, ListSerializer(WeightEntry.serializer()))
+        _water.value = readList(waterFile, ListSerializer(WaterDay.serializer()))
         _targets.value = readTargets()
         _expandedCategories.value = readExpandedCategories()
         // 內建食物庫讀失敗時（理論上不會）不落地空檔，下次啟動還有機會補上
@@ -119,7 +125,8 @@ class BiteRepository(context: Context) {
             kcal = prefs.getInt(KEY_TARGET_KCAL, fallback.kcal),
             protein = prefs.getInt(KEY_TARGET_PROTEIN, fallback.protein),
             fat = if (prefs.contains(KEY_TARGET_FAT)) prefs.getInt(KEY_TARGET_FAT, 0) else null,
-            carbs = if (prefs.contains(KEY_TARGET_CARBS)) prefs.getInt(KEY_TARGET_CARBS, 0) else null
+            carbs = if (prefs.contains(KEY_TARGET_CARBS)) prefs.getInt(KEY_TARGET_CARBS, 0) else null,
+            water = prefs.getInt(KEY_TARGET_WATER, fallback.water)
         )
     }
 
@@ -263,7 +270,23 @@ class BiteRepository(context: Context) {
         editor.putInt(KEY_TARGET_PROTEIN, targets.protein)
         if (targets.fat == null) editor.remove(KEY_TARGET_FAT) else editor.putInt(KEY_TARGET_FAT, targets.fat)
         if (targets.carbs == null) editor.remove(KEY_TARGET_CARBS) else editor.putInt(KEY_TARGET_CARBS, targets.carbs)
+        editor.putInt(KEY_TARGET_WATER, targets.water)
         editor.apply()
+    }
+
+    // ---------- 喝水 ----------
+
+    fun waterOn(date: String): Int = _water.value.firstOrNull { it.date == date }?.ml ?: 0
+
+    /**
+     * 加減這一天的水量，[deltaMl] 可以是負的。總量不會低於 0；
+     * 歸零就把那一天整筆移掉，不留一堆 0 在檔案裡。
+     */
+    fun addWater(date: String, deltaMl: Int) {
+        val next = (waterOn(date) + deltaMl).coerceAtLeast(0)
+        val without = _water.value.filterNot { it.date == date }
+        _water.value = if (next == 0) without else without + WaterDay(date, next)
+        persistWater()
     }
 
     // ---------- 備份 ----------
@@ -274,6 +297,7 @@ class BiteRepository(context: Context) {
         diary = _entries.value,
         weights = _weights.value,
         dayNotes = _dayNotes.value,
+        water = _water.value,
         targets = _targets.value
     )
 
@@ -286,10 +310,12 @@ class BiteRepository(context: Context) {
         _entries.value = mergeBy(_entries.value, backup.diary) { it.id }
         _weights.value = mergeBy(_weights.value, backup.weights) { it.id }
         _dayNotes.value = mergeBy(_dayNotes.value, backup.dayNotes) { it.date }
+        _water.value = mergeBy(_water.value, backup.water) { it.date }
         backup.targets?.let { setTargets(it) }
         persistFoods()
         persistDiary()
         persistWeights()
+        persistWater()
     }
 
     private fun <T> mergeBy(current: List<T>, incoming: List<T>, key: (T) -> String): List<T> {
@@ -321,6 +347,15 @@ class BiteRepository(context: Context) {
         }
     }
 
+    private fun persistWater() {
+        scope.launch {
+            writeMutex.withLock {
+                val content = json.encodeToString(ListSerializer(WaterDay.serializer()), _water.value)
+                writeAtomically(waterFile, content)
+            }
+        }
+    }
+
     private fun persistWeights() {
         scope.launch {
             writeMutex.withLock {
@@ -348,6 +383,7 @@ class BiteRepository(context: Context) {
         const val FILE_FOODS = "foods.json"
         const val FILE_DIARY = "diary.json"
         const val FILE_WEIGHTS = "weights.json"
+        const val FILE_WATER = "water.json"
         const val ASSET_SEED = "seed_foods.json"
 
         const val PREFS_NAME = "routina_bite"
@@ -355,6 +391,7 @@ class BiteRepository(context: Context) {
         const val KEY_TARGET_PROTEIN = "target_protein"
         const val KEY_TARGET_FAT = "target_fat"
         const val KEY_TARGET_CARBS = "target_carbs"
+        const val KEY_TARGET_WATER = "target_water"
         const val KEY_EXPANDED_CATEGORIES = "expanded_categories"
         const val NONE_CATEGORY_KEY = "__none__"
     }

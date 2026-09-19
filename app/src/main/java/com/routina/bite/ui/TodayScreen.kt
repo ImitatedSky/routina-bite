@@ -72,9 +72,11 @@ fun TodayScreen(
     val allEntries by viewModel.entries.collectAsStateWithLifecycle()
     val dayNotes by viewModel.dayNotes.collectAsStateWithLifecycle()
     val targets by viewModel.targets.collectAsStateWithLifecycle()
+    val waterDays by viewModel.water.collectAsStateWithLifecycle()
 
     val entries = entriesOn(allEntries, date)
     val note = dayNotes.firstOrNull { it.date == date }?.note.orEmpty()
+    val water = waterDays.firstOrNull { it.date == date }?.ml ?: 0
 
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -131,6 +133,14 @@ fun TodayScreen(
             }
 
             item { SummaryCard(entries = entries, targets = targets) }
+
+            item {
+                WaterCard(
+                    ml = water,
+                    target = targets.water,
+                    onAdd = { delta -> viewModel.addWater(date, delta) }
+                )
+            }
 
             item { DayCompositionCard(entries = entries) }
 
@@ -336,7 +346,7 @@ private fun MacroRow(label: String, value: Double, target: Int?, color: Color) {
     }
 }
 
-private fun progressOf(value: Double, target: Double): Float =
+fun progressOf(value: Double, target: Double): Float =
     if (target <= 0.0) 0f else (value / target).coerceIn(0.0, 1.0).toFloat()
 
 @Composable

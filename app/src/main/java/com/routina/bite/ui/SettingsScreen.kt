@@ -59,6 +59,7 @@ fun SettingsScreen(
     var protein by remember { mutableStateOf(targets.protein.toString()) }
     var fat by remember { mutableStateOf(targets.fat?.toString().orEmpty()) }
     var carbs by remember { mutableStateOf(targets.carbs?.toString().orEmpty()) }
+    var water by remember { mutableStateOf(targets.water.toString()) }
 
     // 匯入會改掉目標，欄位要跟著換成新值
     LaunchedEffect(targets) {
@@ -66,12 +67,15 @@ fun SettingsScreen(
         protein = targets.protein.toString()
         fat = targets.fat?.toString().orEmpty()
         carbs = targets.carbs?.toString().orEmpty()
+        water = targets.water.toString()
     }
 
     val kcalValue = kcal.toIntOrNull()
     val proteinValue = protein.toIntOrNull()
+    val waterValue = water.toIntOrNull()
     val kcalOk = kcalValue != null && kcalValue > 0
     val proteinOk = proteinValue != null && proteinValue > 0
+    val waterOk = waterValue != null && waterValue > 0
 
     val targetsSaved = stringResource(R.string.targets_saved)
     val exportDone = stringResource(R.string.export_done)
@@ -182,15 +186,23 @@ fun SettingsScreen(
                 label = stringResource(R.string.field_target_carbs),
                 modifier = Modifier.fillMaxWidth()
             )
+            NumberField(
+                value = water,
+                onValueChange = { water = it },
+                label = stringResource(R.string.field_target_water),
+                isError = !waterOk,
+                modifier = Modifier.fillMaxWidth()
+            )
             Button(
-                enabled = kcalOk && proteinOk,
+                enabled = kcalOk && proteinOk && waterOk,
                 onClick = {
                     viewModel.setTargets(
                         Targets(
                             kcal = kcalValue ?: targets.kcal,
                             protein = proteinValue ?: targets.protein,
                             fat = fat.toIntOrNull()?.takeIf { it > 0 },
-                            carbs = carbs.toIntOrNull()?.takeIf { it > 0 }
+                            carbs = carbs.toIntOrNull()?.takeIf { it > 0 },
+                            water = waterValue ?: targets.water
                         )
                     )
                     toast(targetsSaved)

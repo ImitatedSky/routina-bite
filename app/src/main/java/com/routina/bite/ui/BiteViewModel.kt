@@ -16,6 +16,7 @@ import com.routina.bite.model.DayNote
 import com.routina.bite.model.DiaryEntry
 import com.routina.bite.model.Food
 import com.routina.bite.model.Targets
+import com.routina.bite.model.WaterDay
 import com.routina.bite.model.WeightEntry
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +42,7 @@ class BiteViewModel(application: Application) : AndroidViewModel(application) {
     val dayNotes: StateFlow<List<DayNote>> = repository.dayNotes
     val weights: StateFlow<List<WeightEntry>> = repository.weights
     val targets: StateFlow<Targets> = repository.targets
+    val water: StateFlow<List<WaterDay>> = repository.water
 
     /** 目前被展開的分類（未分類是空字串）。食物庫頁與新增紀錄頁共用同一份 */
     val expandedCategories: StateFlow<Set<String>> = repository.expandedCategories
@@ -60,6 +62,11 @@ class BiteViewModel(application: Application) : AndroidViewModel(application) {
     fun backToToday() {
         _selectedDate.value = todayDate()
     }
+
+    // ---------- 喝水 ----------
+
+    /** 加減這一天的水量，[deltaMl] 可為負；總量不會低於 0 */
+    fun addWater(date: String, deltaMl: Int) = repository.addWater(date, deltaMl)
 
     // ---------- 食物庫 ----------
 

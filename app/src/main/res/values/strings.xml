@@ -144,7 +144,7 @@
     <string name="error_target_required">必填，且要大於 0</string>
     <string name="targets_saved">目標已更新</string>
     <string name="settings_backup">備份</string>
-    <string name="settings_backup_hint">匯出是一個 JSON 檔，含食物庫、紀錄、體重、每日備註與目標。匯入依 id 合併，不會刪掉現有資料。</string>
+    <string name="settings_backup_hint">匯出含食物庫、紀錄、體重、每日備註與目標：沒有照片時是一個 JSON 檔，有照片時是一個 zip（JSON 加上所有照片）。匯入兩種都收，依 id 合併，不會刪掉現有資料。</string>
     <string name="action_export">匯出備份</string>
     <string name="action_import">匯入備份</string>
     <string name="export_done">已匯出備份</string>
@@ -210,4 +210,12 @@
     <string name="entry_field_protein">蛋白質 g</string>
     <string name="entry_field_fat">脂肪 g</string>
     <string name="entry_field_carbs">碳水 g</string>
+
+    <!-- 紀錄照片 -->
+    <string name="photo_add">加照片</string>
+    <string name="photo_hint">點縮圖換一張，長按看大圖</string>
+    <string name="photo_remove">移除照片</string>
+    <string name="photo_thumb">紀錄照片</string>
+    <string name="photo_view">看大圖</string>
+    <string name="photo_failed">讀不到這張圖，請換一張試試</string>
 </resources>

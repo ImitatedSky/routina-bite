@@ -5,8 +5,11 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.routina.bite.BiteApp
+import com.routina.bite.data.BackupArchive
 import com.routina.bite.data.BackupCodec
 import com.routina.bite.data.entriesOn
+import com.routina.bite.data.importPhotoFile
+import com.routina.bite.data.photosDir
 import com.routina.bite.data.shiftDate
 import com.routina.bite.data.todayDate
 import com.routina.bite.model.DayNote
@@ -20,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.BufferedInputStream
 import java.util.UUID
 
 /** 匯入的結果：成功時回目前的總筆數，失敗時回拒收原因 */
@@ -91,6 +95,7 @@ class BiteViewModel(application: Application) : AndroidViewModel(application) {
                 servingGrams = draft.servingGrams,
                 perServing = draft.basis,
                 note = draft.note,
+                photo = draft.photo,
                 createdAt = System.currentTimeMillis()
             )
         )
@@ -106,12 +111,26 @@ class BiteViewModel(application: Application) : AndroidViewModel(application) {
                 servings = draft.servings,
                 servingGrams = draft.servingGrams,
                 perServing = draft.basis,
-                note = draft.note
+                note = draft.note,
+                photo = draft.photo
             )
         )
     }
 
-    fun deleteEntry(id: String) = repository.deleteEntry(id)
+    /** 紀錄沒了，它的照片檔也該沒了 */
+    fun deleteEntry(id: String) {
+        findEntry(id)?.photo?.let { repository.deletePhoto(it) }
+        repository.deleteEntry(id)
+    }
+
+    // ---------- 照片 ----------
+
+    /** 把選到的圖縮小存進 App 私有目錄，回傳檔名；讀不到或壓不出來就回 null */
+    suspend fun importPhoto(uri: Uri): String? = withContext(Dispatchers.IO) {
+        importPhotoFile(getApplication(), uri)
+    }
+
+    fun deletePhoto(name: String) = repository.deletePhoto(name)
 
     /**
      * 把前一天的每一筆複製到 [date]，id 與時間都重新給。
@@ -125,6 +144,8 @@ class BiteViewModel(application: Application) : AndroidViewModel(application) {
             entry.copy(
                 id = UUID.randomUUID().toString(),
                 date = date,
+                // 照片不跟著複製：兩筆共用同一個檔，刪掉一筆就會把另一筆的圖也刪掉
+                photo = "",
                 // 加 index 讓複製出來的順序與昨天一致
                 createdAt = now + index
             )
@@ -152,13 +173,20 @@ class BiteViewModel(application: Application) : AndroidViewModel(application) {
 
     // ---------- 備份 ----------
 
-    fun exportBackup(uri: Uri, onDone: (Boolean) -> Unit) {
+    /** [asZip] 由設定頁在按下匯出時決定（有任何一筆帶照片就包成 zip），檔名與 MIME 也是那時挑的 */
+    fun exportBackup(uri: Uri, asZip: Boolean, onDone: (Boolean) -> Unit) {
         viewModelScope.launch {
             val content = BackupCodec.encode(repository.buildBackup())
+            val photos = if (asZip) repository.storedPhotos() else emptyList()
             val ok = withContext(Dispatchers.IO) {
                 runCatching {
-                    getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
-                        out.write(content.toByteArray())
+                    val resolver = getApplication<Application>().contentResolver
+                    resolver.openOutputStream(uri)?.use { out ->
+                        if (asZip) {
+                            BackupArchive.writeZip(out, content, photos)
+                        } else {
+                            out.write(content.toByteArray())
+                        }
                     } ?: error("no output stream")
                 }.isSuccess
             }
@@ -168,12 +196,7 @@ class BiteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun importBackup(uri: Uri, onDone: (ImportOutcome) -> Unit) {
         viewModelScope.launch {
-            val text = withContext(Dispatchers.IO) {
-                runCatching {
-                    getApplication<Application>().contentResolver.openInputStream(uri)
-                        ?.bufferedReader()?.use { it.readText() }
-                }.getOrNull()
-            }
+            val text = withContext(Dispatchers.IO) { readBackup(uri) }
             if (text == null) {
                 onDone(ImportOutcome.Failed(BackupCodec.Reject.UNREADABLE))
                 return@launch
@@ -194,4 +217,23 @@ class BiteViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    /**
+     * 同一個入口要吃得下純 JSON 與帶照片的 zip。
+     * 用內容的前兩個 byte 判斷（zip 一定是 PK），不看副檔名——選擇器給的是 URI，副檔名不可靠。
+     */
+    private fun readBackup(uri: Uri): String? = runCatching {
+        val context = getApplication<Application>()
+        context.contentResolver.openInputStream(uri)?.use { raw ->
+            val input = BufferedInputStream(raw)
+            input.mark(2)
+            val zip = input.read() == 'P'.code && input.read() == 'K'.code
+            input.reset()
+            if (zip) {
+                BackupArchive.readZip(input, photosDir(context))
+            } else {
+                input.bufferedReader().readText()
+            }
+        }
+    }.getOrNull()
 }

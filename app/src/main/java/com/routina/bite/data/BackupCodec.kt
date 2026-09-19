@@ -40,4 +40,7 @@ object BackupCodec {
     }
 
     fun defaultFileName(): String = "bite-backup-" + compactToday() + ".json"
+
+    /** 有照片時匯出的是一個 zip（backup.json + photos/），檔名只差副檔名 */
+    fun defaultZipFileName(): String = "bite-backup-" + compactToday() + ".zip"
 }

@@ -1,22 +1,38 @@
 package com.routina.bite.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.routina.bite.R
@@ -25,6 +41,7 @@ import com.routina.bite.model.DiaryEntry
 import com.routina.bite.model.Food
 import com.routina.bite.model.Meal
 import com.routina.bite.model.Nutrients
+import kotlinx.coroutines.launch
 
 /**
  * 表單正在編輯的一筆紀錄。[basis] 是「每一份」的營養值，表單上顯示的是 basis × [servings]。
@@ -37,6 +54,7 @@ data class EntryDraft(
     val basis: Nutrients = Nutrients.EMPTY,
     val meal: Meal?,
     val note: String = "",
+    val photo: String = "",
     val foodId: String? = null
 )
 
@@ -60,20 +78,29 @@ fun draftOf(entry: DiaryEntry) = EntryDraft(
     basis = entry.perServing,
     meal = entry.meal,
     note = entry.note,
+    photo = entry.photo,
     foodId = entry.foodId
 )
 
 /** 份數的真值來自哪裡。沒動過就用帶進來的精確份數，不要拿四捨五入過的欄位文字回推 */
 private enum class AmountEdit { NONE, SERVINGS, GRAMS }
 
+/** 表單裡的照片縮圖大小 */
+private val PHOTO_SIZE = 64.dp
+
 /**
  * 新增與編輯紀錄共用的表單。三個入口（快速輸入、點食物、編輯紀錄）的差別只在 [initial]。
  *
  * 連動規則：改份數或公克 → 四個營養欄以 basis × 份數 重算；
  * 直接改某個營養欄 → basis 的那一項改成 輸入值 ÷ 份數。最後動的那個就是使用者要的值。
+ *
+ * 照片要 [viewModel]：選到圖就得當場複製進 App 目錄（URI 的授權只在回呼那一趟有效），
+ * 換照片與取消還要把不要的檔刪掉。
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun EntryFormDialog(
+    viewModel: BiteViewModel,
     initial: EntryDraft,
     editing: Boolean,
     onConfirm: (EntryDraft) -> Unit,
@@ -95,6 +122,39 @@ fun EntryFormDialog(
     var note by remember { mutableStateOf(initial.note) }
     var basis by remember { mutableStateOf(initial.basis) }
     var edited by remember { mutableStateOf(AmountEdit.NONE) }
+
+    var photo by remember { mutableStateOf(initial.photo) }
+    var viewingPhoto by remember { mutableStateOf(false) }
+    var photoFailed by remember { mutableStateOf(false) }
+    // 這次表單新寫進去的檔名。存檔時只留最終那一張，取消時全刪，才不會留下孤兒檔
+    val addedPhotos = remember { mutableStateListOf<String>() }
+    val scope = rememberCoroutineScope()
+
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val name = viewModel.importPhoto(uri)
+            photoFailed = name == null
+            if (name != null) {
+                addedPhotos += name
+                photo = name
+            }
+        }
+    }
+
+    fun pickPhoto() {
+        photoFailed = false
+        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
+
+    fun cancel() {
+        addedPhotos.forEach { viewModel.deletePhoto(it) }
+        onDismiss()
+    }
+
+    val photoState = rememberPhoto(photo, with(LocalDensity.current) { PHOTO_SIZE.roundToPx() })
+    // 檔案不在（例如匯入了只有 JSON 的備份）就當作沒有照片，不顯示破圖
+    val hasPhoto = photo.isNotEmpty() && photoState !is PhotoState.Missing
 
     val amount: Double? = when (edited) {
         AmountEdit.NONE -> initial.servings
@@ -122,7 +182,7 @@ fun EntryFormDialog(
     val valid = amount != null && amount > 0.0
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { cancel() },
         title = {
             Text(
                 text = if (editing) {
@@ -234,6 +294,49 @@ fun EntryFormDialog(
                     allowNone = initial.meal == null
                 )
 
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (hasPhoto) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            PhotoThumb(
+                                state = photoState,
+                                size = PHOTO_SIZE,
+                                corner = 8.dp,
+                                modifier = Modifier.combinedClickable(
+                                    onClick = { pickPhoto() },
+                                    onLongClick = { viewingPhoto = true }
+                                )
+                            )
+                            Text(
+                                text = stringResource(R.string.photo_hint),
+                                style = MaterialTheme.typography.bodySmall.zh(),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { photo = "" }) {
+                                Icon(Icons.Default.Close, stringResource(R.string.photo_remove))
+                            }
+                        }
+                    } else {
+                        OutlinedButton(onClick = { pickPhoto() }) {
+                            Icon(Icons.Default.AddAPhoto, contentDescription = null)
+                            Text(
+                                text = stringResource(R.string.photo_add),
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                    if (photoFailed) {
+                        Text(
+                            text = stringResource(R.string.photo_failed),
+                            style = MaterialTheme.typography.bodySmall.zh(),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
@@ -249,13 +352,19 @@ fun EntryFormDialog(
                 enabled = valid,
                 onClick = {
                     val value = amount ?: return@TextButton
+                    // 換掉或移除的照片在這裡才刪：表單中途改了主意不算數
+                    addedPhotos.forEach { if (it != photo) viewModel.deletePhoto(it) }
+                    if (initial.photo.isNotEmpty() && initial.photo != photo) {
+                        viewModel.deletePhoto(initial.photo)
+                    }
                     onConfirm(
                         initial.copy(
                             name = name.trim().ifEmpty { quickName },
                             servings = value,
                             basis = basis,
                             meal = meal,
-                            note = note.trim()
+                            note = note.trim(),
+                            photo = photo
                         )
                     )
                 }
@@ -270,9 +379,13 @@ fun EntryFormDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+            TextButton(onClick = { cancel() }) { Text(stringResource(R.string.action_cancel)) }
         }
     )
+
+    if (viewingPhoto) {
+        PhotoViewerDialog(name = photo, onDismiss = { viewingPhoto = false })
+    }
 }
 
 // 每份值是 0 就讓欄位留白：空白在這個 App 裡本來就當作 0，印一排 0 反而又要先刪字

@@ -47,7 +47,11 @@ fun SettingsScreen(
     onBack: () -> Unit
 ) {
     val targets by viewModel.targets.collectAsStateWithLifecycle()
+    val entries by viewModel.entries.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    // 有任何一筆帶照片才匯出成 zip；沒有照片的使用者流程與以前完全一樣
+    val hasPhotos = entries.any { it.photo.isNotEmpty() }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -81,14 +85,22 @@ fun SettingsScreen(
         scope.launch { snackbar.showSnackbar(message) }
     }
 
-    val exportLauncher = rememberLauncherForActivityResult(
+    // CreateDocument 的 MIME 在建構時就固定，所以兩種格式各準備一個，按下匯出時再挑
+    val exportJsonLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        viewModel.exportBackup(uri) { ok -> toast(if (ok) exportDone else exportFailed) }
+        viewModel.exportBackup(uri, asZip = false) { ok -> toast(if (ok) exportDone else exportFailed) }
     }
 
-    // 有些檔案管理器把 .json 標成別的 MIME，所以也放行 */*
+    val exportZipLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        viewModel.exportBackup(uri, asZip = true) { ok -> toast(if (ok) exportDone else exportFailed) }
+    }
+
+    // 檔案管理器對 .json 與 .zip 標的 MIME 不一致，一律放行由內容判斷
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -194,11 +206,19 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { exportLauncher.launch(BackupCodec.defaultFileName()) }) {
+                OutlinedButton(
+                    onClick = {
+                        if (hasPhotos) {
+                            exportZipLauncher.launch(BackupCodec.defaultZipFileName())
+                        } else {
+                            exportJsonLauncher.launch(BackupCodec.defaultFileName())
+                        }
+                    }
+                ) {
                     Text(stringResource(R.string.action_export))
                 }
                 OutlinedButton(
-                    onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) }
+                    onClick = { importLauncher.launch(arrayOf("*/*")) }
                 ) {
                     Text(stringResource(R.string.action_import))
                 }

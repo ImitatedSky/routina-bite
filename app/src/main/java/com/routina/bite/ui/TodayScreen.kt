@@ -192,6 +192,7 @@ fun TodayScreen(
 
     editing?.let { entry ->
         EntryFormDialog(
+            viewModel = viewModel,
             initial = draftOf(entry),
             editing = true,
             onConfirm = { draft ->
@@ -399,6 +400,15 @@ private fun EntryRow(entry: DiaryEntry, onEdit: () -> Unit, onDelete: () -> Unit
             modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // 沒照片的列版面完全不變，不留空位
+            if (entry.photo.isNotEmpty()) {
+                PhotoThumb(
+                    name = entry.photo,
+                    size = 40.dp,
+                    corner = 6.dp,
+                    modifier = Modifier.padding(end = 12.dp)
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = entry.name, style = MaterialTheme.typography.bodyLarge)
                 Text(

@@ -157,6 +157,7 @@ fun AddFoodScreen(
 
     picked?.let { food ->
         EntryFormDialog(
+            viewModel = viewModel,
             initial = draftOf(food, meal),
             editing = false,
             onConfirm = { draft ->
@@ -170,6 +171,7 @@ fun AddFoodScreen(
 
     if (quickAdd) {
         EntryFormDialog(
+            viewModel = viewModel,
             initial = draftOf(meal),
             editing = false,
             onConfirm = { draft ->

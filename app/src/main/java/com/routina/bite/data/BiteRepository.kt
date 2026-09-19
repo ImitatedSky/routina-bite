@@ -212,6 +212,22 @@ class BiteRepository(context: Context) {
         persistDiary()
     }
 
+    /**
+     * 刪掉一張照片檔。刪紀錄、表單換照片、表單取消三處共用，
+     * 照片不在 JSON 裡，沒人刪就會一直留著。
+     */
+    fun deletePhoto(name: String) {
+        if (name.isEmpty()) return
+        scope.launch { File(photosDir(appContext), name).delete() }
+    }
+
+    /** 目前所有紀錄用到、而且檔案真的還在的照片（匯出備份時用） */
+    fun storedPhotos(): List<File> = _entries.value
+        .map { it.photo }
+        .filter { it.isNotEmpty() }
+        .distinct()
+        .mapNotNull { photoFile(appContext, it) }
+
     /** 備註清空就把那天的備註移除，不留一筆空字串 */
     fun setDayNote(date: String, note: String) {
         val trimmed = note.trim()

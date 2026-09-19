@@ -12,8 +12,6 @@ import com.routina.bite.data.todayDate
 import com.routina.bite.model.DayNote
 import com.routina.bite.model.DiaryEntry
 import com.routina.bite.model.Food
-import com.routina.bite.model.Meal
-import com.routina.bite.model.Nutrients
 import com.routina.bite.model.Targets
 import com.routina.bite.model.WeightEntry
 import kotlinx.coroutines.Dispatchers
@@ -80,41 +78,37 @@ class BiteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun findEntry(id: String): DiaryEntry? = repository.findEntry(id)
 
-    fun addFoodEntry(date: String, meal: Meal, food: Food, servings: Double) {
+    /** 新增一筆。[draft] 是表單填出來的內容，foodId 為 null 就是快速輸入 */
+    fun addEntry(date: String, draft: EntryDraft) {
         repository.addEntry(
             DiaryEntry(
                 id = UUID.randomUUID().toString(),
                 date = date,
-                meal = meal,
-                foodId = food.id,
-                name = food.name,
-                servings = servings,
-                servingGrams = food.servingGrams,
-                perServing = food.nutrients,
+                meal = draft.meal,
+                foodId = draft.foodId,
+                name = draft.name,
+                servings = draft.servings,
+                servingGrams = draft.servingGrams,
+                perServing = draft.basis,
+                note = draft.note,
                 createdAt = System.currentTimeMillis()
             )
         )
     }
 
-    /** 快速輸入：不建食物，直接記一筆（一份＝輸入的量） */
-    fun addQuickEntry(date: String, meal: Meal, name: String, nutrients: Nutrients) {
-        repository.addEntry(
-            DiaryEntry(
-                id = UUID.randomUUID().toString(),
-                date = date,
-                meal = meal,
-                foodId = null,
-                name = name,
-                servings = 1.0,
-                servingGrams = null,
-                perServing = nutrients,
-                createdAt = System.currentTimeMillis()
+    /** 改一筆。id、日期與建立時間留著，其餘一律以表單為準（含 foodId，常吃／最近才不會漏算） */
+    fun updateEntry(entry: DiaryEntry, draft: EntryDraft) {
+        repository.updateEntry(
+            entry.copy(
+                meal = draft.meal,
+                foodId = draft.foodId,
+                name = draft.name,
+                servings = draft.servings,
+                servingGrams = draft.servingGrams,
+                perServing = draft.basis,
+                note = draft.note
             )
         )
-    }
-
-    fun updateEntry(entry: DiaryEntry, servings: Double, meal: Meal?) {
-        repository.updateEntry(entry.copy(servings = servings, meal = meal))
     }
 
     fun deleteEntry(id: String) = repository.deleteEntry(id)

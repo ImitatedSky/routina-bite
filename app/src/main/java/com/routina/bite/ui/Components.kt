@@ -16,13 +16,17 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import com.routina.bite.R
@@ -70,7 +74,10 @@ fun OverflowMenu(items: List<Pair<String, () -> Unit>>) {
     }
 }
 
-/** 數字輸入。只收得進數字與小數點，省掉一堆解析失敗的情況 */
+/**
+ * 數字輸入。只收得進數字與小數點，省掉一堆解析失敗的情況。
+ * 取得焦點時全選現有內容，直接打字就覆蓋，不必先刪。
+ */
 @Composable
 fun NumberField(
     value: String,
@@ -80,9 +87,28 @@ fun NumberField(
     isError: Boolean = false,
     errorText: String? = null
 ) {
+    // 對外是 String，內部要 TextFieldValue 才控制得了選取範圍
+    var field by remember { mutableStateOf(TextFieldValue(value)) }
+    var focused by remember { mutableStateOf(false) }
+    // 外面改了值（例如份數被公克連動算出來）就同步回來。寫在組合階段而不是 LaunchedEffect，
+    // 不然欄位會先閃一格舊值
+    if (field.text != value) {
+        field = field.copy(text = value, selection = TextRange(value.length))
+    }
+    // 點進來的那一下會順手把游標放在點到的位置，全選得等這次事件處理完才設得住
+    LaunchedEffect(focused) {
+        if (focused) field = field.copy(selection = TextRange(0, field.text.length))
+    }
+
     OutlinedTextField(
-        value = value,
-        onValueChange = { input -> onValueChange(input.filter { it.isDigit() || it == '.' }) },
+        value = field,
+        onValueChange = { input ->
+            // 濾掉字元會讓游標位置對不上，所以帶了不合法字元就整批拒收
+            if (input.text.all { it.isDigit() || it == '.' }) {
+                field = input
+                onValueChange(input.text)
+            }
+        },
         label = { Text(label) },
         singleLine = true,
         isError = isError,
@@ -92,7 +118,7 @@ fun NumberField(
             null
         },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        modifier = modifier
+        modifier = modifier.onFocusChanged { focused = it.isFocused }
     )
 }
 

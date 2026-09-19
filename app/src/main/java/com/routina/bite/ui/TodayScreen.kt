@@ -163,7 +163,7 @@ fun TodayScreen(
                     meal = null,
                     entries = unassigned,
                     onAdd = null,
-                    onClick = { editing = it },
+                    onEdit = { editing = it },
                     onDelete = { deleting = it }
                 )
             }
@@ -173,7 +173,7 @@ fun TodayScreen(
                     meal = meal,
                     entries = entries.filter { it.meal == meal },
                     onAdd = { onAdd(date, meal) },
-                    onClick = { editing = it },
+                    onEdit = { editing = it },
                     onDelete = { deleting = it }
                 )
             }
@@ -191,10 +191,11 @@ fun TodayScreen(
     }
 
     editing?.let { entry ->
-        EntryEditDialog(
-            entry = entry,
-            onSave = { servings, meal ->
-                viewModel.updateEntry(entry, servings, meal)
+        EntryFormDialog(
+            initial = draftOf(entry),
+            editing = true,
+            onConfirm = { draft ->
+                viewModel.updateEntry(entry, draft)
                 editing = null
             },
             onDismiss = { editing = null }
@@ -358,7 +359,7 @@ private fun LazyListScope.mealSection(
     meal: Meal?,
     entries: List<DiaryEntry>,
     onAdd: (() -> Unit)?,
-    onClick: (DiaryEntry) -> Unit,
+    onEdit: (DiaryEntry) -> Unit,
     onDelete: (DiaryEntry) -> Unit
 ) {
     item {
@@ -384,14 +385,16 @@ private fun LazyListScope.mealSection(
         }
     }
     items(entries, key = { it.id }) { entry ->
-        EntryRow(entry = entry, onClick = { onClick(entry) }, onDelete = { onDelete(entry) })
+        EntryRow(entry = entry, onEdit = { onEdit(entry) }, onDelete = { onDelete(entry) })
     }
 }
 
 @Composable
-private fun EntryRow(entry: DiaryEntry, onClick: () -> Unit, onDelete: () -> Unit) {
+private fun EntryRow(entry: DiaryEntry, onEdit: () -> Unit, onDelete: () -> Unit) {
+    val editLabel = stringResource(R.string.action_edit)
     val deleteLabel = stringResource(R.string.action_delete)
-    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    // 點整列與 ⋯ 的「編輯」開的是同一張表單
+    Card(modifier = Modifier.fillMaxWidth().clickable(onClick = onEdit)) {
         Row(
             modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -403,12 +406,20 @@ private fun EntryRow(entry: DiaryEntry, onClick: () -> Unit, onDelete: () -> Uni
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                // 沒備註就不佔這一行
+                if (entry.note.isNotEmpty()) {
+                    Text(
+                        text = entry.note,
+                        style = MaterialTheme.typography.bodySmall.zh(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
             Text(
                 text = formatKcal(entry.total.kcal).toString(),
                 style = MaterialTheme.typography.bodyLarge
             )
-            OverflowMenu(listOf(deleteLabel to onDelete))
+            OverflowMenu(listOf(editLabel to onEdit, deleteLabel to onDelete))
         }
     }
 }
@@ -425,43 +436,6 @@ private fun amountLabel(entry: DiaryEntry): String {
             formatGrams(entry.servings * grams)
         )
     }
-}
-
-@Composable
-private fun EntryEditDialog(
-    entry: DiaryEntry,
-    onSave: (Double, Meal?) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var servings by remember { mutableStateOf(formatAmount(entry.servings)) }
-    var meal by remember { mutableStateOf(entry.meal ?: defaultMeal()) }
-    val amount = servings.toDoubleOrNull()
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.entry_edit_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(entry.name, style = MaterialTheme.typography.bodyLarge)
-                NumberField(
-                    value = servings,
-                    onValueChange = { servings = it },
-                    label = stringResource(R.string.add_servings),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                MealPicker(selected = meal, onSelect = { meal = it })
-            }
-        },
-        confirmButton = {
-            TextButton(
-                enabled = amount != null && amount > 0.0,
-                onClick = { onSave(amount ?: entry.servings, meal) }
-            ) { Text(stringResource(R.string.action_save)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
-        }
-    )
 }
 
 @Composable

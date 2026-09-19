@@ -21,6 +21,7 @@ data class DiaryEntry(
     val servings: Double,
     val servingGrams: Double? = null,
     val perServing: Nutrients,
+    val note: String = "",
     val createdAt: Long
 ) {
     /** 這一筆實際吃進去的量 */

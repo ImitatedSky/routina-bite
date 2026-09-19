@@ -19,6 +19,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.routina.bite.data.defaultMeal
+import com.routina.bite.data.todayDate
 import com.routina.bite.model.Meal
 import com.routina.bite.ui.AddFoodScreen
 import com.routina.bite.ui.BiteViewModel
@@ -37,16 +38,22 @@ class MainActivity : ComponentActivity() {
     // 被能力跳板帶到前景時 +1，畫面看到值變了就回到今日頁
     private val openTodayRequests = mutableIntStateOf(0)
 
+    // 桌面捷徑「記一餐」按下時 +1，畫面看到值變了就開新增紀錄頁
+    private val openAddRequests = mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // 冷啟動也要讀一次：桌面捷徑常常是在 App 沒開著的時候按的，
+        // 那一次只會進 onCreate，不會進 onNewIntent
+        readRequests(intent)
         setContent {
             BiteTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    BiteNavHost(openTodayRequests.intValue)
+                    BiteNavHost(openTodayRequests.intValue, openAddRequests.intValue)
                 }
             }
         }
@@ -55,14 +62,27 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        readRequests(intent)
+    }
+
+    /** 旗標讀完就從 intent 上拿掉，不然轉螢幕重建時會照著同一個 intent 再跳一次 */
+    private fun readRequests(intent: Intent) {
         if (intent.getBooleanExtra(EXTRA_OPEN_TODAY, false)) {
+            intent.removeExtra(EXTRA_OPEN_TODAY)
             openTodayRequests.intValue += 1
+        }
+        if (intent.getBooleanExtra(EXTRA_OPEN_ADD, false)) {
+            intent.removeExtra(EXTRA_OPEN_ADD)
+            openAddRequests.intValue += 1
         }
     }
 
     companion object {
         /** 跳板用來要求「回到今日頁」，一般啟動不會帶 */
         const val EXTRA_OPEN_TODAY = "com.routina.bite.extra.OPEN_TODAY"
+
+        /** 桌面捷徑用來要求「開今天的新增紀錄頁」，一般啟動不會帶 */
+        const val EXTRA_OPEN_ADD = "com.routina.bite.extra.OPEN_ADD"
     }
 }
 
@@ -92,7 +112,7 @@ private object Routes {
 }
 
 @Composable
-private fun BiteNavHost(openTodayRequests: Int) {
+private fun BiteNavHost(openTodayRequests: Int, openAddRequests: Int) {
     val navController = rememberNavController()
     val viewModel: BiteViewModel = viewModel()
 
@@ -101,6 +121,16 @@ private fun BiteNavHost(openTodayRequests: Int) {
         if (openTodayRequests > 0) {
             viewModel.backToToday()
             navController.popBackStack(Routes.TODAY, inclusive = false)
+        }
+    }
+
+    // 桌面捷徑「記一餐」：先回到今日頁再疊新增紀錄頁，返回鍵才會停在今日頁。
+    // 日期用今天、餐別依當下時間 —— 捷徑的語意就是「現在」
+    LaunchedEffect(openAddRequests) {
+        if (openAddRequests > 0) {
+            viewModel.backToToday()
+            navController.popBackStack(Routes.TODAY, inclusive = false)
+            navController.navigate(Routes.add(todayDate(), defaultMeal()))
         }
     }
 

@@ -46,7 +46,25 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- 長按 App 圖示的靜態捷徑；要掛在 LAUNCHER 這個 Activity 上 -->
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
+        <!--
+          桌面捷徑的跳板：喝水與「記 1 份某食物」都不開畫面，做完 toast 就 finish。
+          exported 是必要的（按下捷徑的是 launcher）。捷徑用的是指名元件的 Intent，
+          不靠 action 比對，所以不開任何 intent-filter，不對外多露一個入口。
+        -->
+        <activity
+            android:name=".ShortcutActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Bite.Invisible" />
 
         <!--
           能力跳板：家族成員呼叫 Bite 的入口。exported 是必要的（呼叫方是別的 App），

@@ -30,13 +30,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.content.pm.ShortcutInfoCompat
+import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.routina.bite.R
 import com.routina.bite.data.BackupCodec
+import com.routina.bite.data.logMealPinShortcut
+import com.routina.bite.data.waterPinShortcut
 import com.routina.bite.model.Targets
 import kotlinx.coroutines.launch
 
@@ -87,6 +92,19 @@ fun SettingsScreen(
 
     fun toast(message: String) {
         scope.launch { snackbar.showSnackbar(message) }
+    }
+
+    val pinUnsupported = stringResource(R.string.shortcut_pin_unsupported)
+
+    // 桌面同不同意由它自己決定，所以沒有「已加到桌面」這種回饋，
+    // 只有「這個桌面根本不支援」才要講
+    fun pinShortcut(shortcut: ShortcutInfoCompat) {
+        if (!ShortcutManagerCompat.isRequestPinShortcutSupported(context)) {
+            toast(pinUnsupported)
+            return
+        }
+        runCatching { ShortcutManagerCompat.requestPinShortcut(context, shortcut, null) }
+            .onFailure { toast(pinUnsupported) }
     }
 
     // CreateDocument 的 MIME 在建構時就固定，所以兩種格式各準備一個，按下匯出時再挑
@@ -239,10 +257,49 @@ fun SettingsScreen(
             HorizontalDivider()
 
             Text(
+                text = stringResource(R.string.settings_shortcuts),
+                style = MaterialTheme.typography.titleMedium.zh()
+            )
+            Text(
+                text = stringResource(R.string.settings_shortcuts_hint),
+                style = MaterialTheme.typography.bodySmall.zh(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            PinShortcutRow(
+                label = stringResource(R.string.settings_pin_water),
+                onPin = { pinShortcut(waterPinShortcut(context)) }
+            )
+            PinShortcutRow(
+                label = stringResource(R.string.settings_pin_log_meal),
+                onPin = { pinShortcut(logMealPinShortcut(context)) }
+            )
+
+            HorizontalDivider()
+
+            Text(
                 text = stringResource(R.string.settings_version, versionName),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+/** 一個可以釘到桌面的捷徑：左邊說是哪一個，右邊一顆按鈕 */
+@Composable
+private fun PinShortcutRow(label: String, onPin: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium.zh(),
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedButton(onClick = onPin) {
+            Text(stringResource(R.string.action_pin_shortcut))
         }
     }
 }

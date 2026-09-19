@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  長按 App 圖示看到的捷徑。這兩個永遠都在（動態的「最近吃的食物」由 data/Shortcuts.kt 發）。
+  排序照這裡的先後：記一餐、喝水，動態的接在後面。
+  intent 一律指名 targetPackage/targetClass，不靠 action 比對，所以收件人不必開 intent-filter。
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <shortcut
+        android:shortcutId="log_meal"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_meal"
+        android:shortcutShortLabel="@string/shortcut_log_meal_short"
+        android:shortcutLongLabel="@string/shortcut_log_meal_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.routina.bite"
+            android:targetClass="com.routina.bite.MainActivity">
+            <extra
+                android:name="com.routina.bite.extra.OPEN_ADD"
+                android:value="true" />
+        </intent>
+    </shortcut>
+
+    <!-- 喝水不開任何畫面：跳板加完水就 toast 然後 finish -->
+    <shortcut
+        android:shortcutId="water_250"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_water"
+        android:shortcutShortLabel="@string/shortcut_water_short"
+        android:shortcutLongLabel="@string/shortcut_water_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.routina.bite"
+            android:targetClass="com.routina.bite.ShortcutActivity">
+            <extra
+                android:name="com.routina.bite.extra.SHORTCUT_ACTION"
+                android:value="water" />
+            <extra
+                android:name="com.routina.bite.extra.ML"
+                android:value="250" />
+        </intent>
+    </shortcut>
+
+</shortcuts>

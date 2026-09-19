@@ -83,7 +83,7 @@ fun AddFoodScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item { MealPicker(selected = meal, onSelect = { meal = it }) }
+            item { MealPicker(selected = meal, onSelect = { picked -> picked?.let { meal = it } }) }
 
             if (frequent.isNotEmpty()) {
                 item { SectionTitle(stringResource(R.string.add_frequent)) }

@@ -204,4 +204,10 @@
     <string name="entry_form_hint">數字是這一筆的總量，改份數會跟著算</string>
     <string name="entry_note">備註（可留空）</string>
     <string name="entry_note_hint">例如：加蛋、外食</string>
+
+    <!-- 紀錄表單的短標籤：四個欄位排成兩欄，放不下全名 -->
+    <string name="entry_field_kcal">熱量</string>
+    <string name="entry_field_protein">蛋白質 g</string>
+    <string name="entry_field_fat">脂肪 g</string>
+    <string name="entry_field_carbs">碳水 g</string>
 </resources>

@@ -1,6 +1,8 @@
 package com.routina.bite.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
@@ -131,17 +133,31 @@ fun mealLabel(meal: Meal?): String = when (meal) {
     null -> stringResource(R.string.meal_none)
 }
 
-/** 四個餐別的選擇列。已經分好餐的紀錄不提供「未分餐」這個選項 */
+/**
+ * 餐別選擇列。[allowNone] 只在編輯一筆本來就「未分餐」的紀錄時打開——
+ * 匯入的舊紀錄沒有餐別，開了表單按儲存不該把它悄悄指派到某一餐。
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MealPicker(
-    selected: Meal,
-    onSelect: (Meal) -> Unit,
-    modifier: Modifier = Modifier
+    selected: Meal?,
+    onSelect: (Meal?) -> Unit,
+    modifier: Modifier = Modifier,
+    allowNone: Boolean = false
 ) {
-    Row(
+    // 五顆晶片在 360dp 上一行排不下（未分餐那顆出現時），用會自動換行的排列
+    FlowRow(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        if (allowNone) {
+            FilterChip(
+                selected = selected == null,
+                onClick = { onSelect(null) },
+                label = { Text(mealLabel(null)) }
+            )
+        }
         Meal.entries.forEach { meal ->
             FilterChip(
                 selected = meal == selected,

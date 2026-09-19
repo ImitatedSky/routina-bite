@@ -35,7 +35,7 @@ data class EntryDraft(
     val servings: Double = 1.0,
     val servingGrams: Double? = null,
     val basis: Nutrients = Nutrients.EMPTY,
-    val meal: Meal,
+    val meal: Meal?,
     val note: String = "",
     val foodId: String? = null
 )
@@ -58,7 +58,7 @@ fun draftOf(entry: DiaryEntry) = EntryDraft(
     servings = entry.servings,
     servingGrams = entry.servingGrams,
     basis = entry.perServing,
-    meal = entry.meal ?: defaultMeal(),
+    meal = entry.meal,
     note = entry.note,
     foodId = entry.foodId
 )
@@ -178,43 +178,48 @@ fun EntryFormDialog(
                     }
                 }
 
+                // 四個營養欄排成兩欄，表單才不會長到備註要捲兩次才看得到
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    NumberField(
-                        value = kcal,
-                        onValueChange = { input ->
-                            kcal = input
-                            setBasis(input) { basis.copy(kcal = it) }
-                        },
-                        label = stringResource(R.string.field_kcal),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    NumberField(
-                        value = protein,
-                        onValueChange = { input ->
-                            protein = input
-                            setBasis(input) { basis.copy(protein = it) }
-                        },
-                        label = stringResource(R.string.field_protein),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    NumberField(
-                        value = fat,
-                        onValueChange = { input ->
-                            fat = input
-                            setBasis(input) { basis.copy(fat = it) }
-                        },
-                        label = stringResource(R.string.field_fat),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    NumberField(
-                        value = carbs,
-                        onValueChange = { input ->
-                            carbs = input
-                            setBasis(input) { basis.copy(carbs = it) }
-                        },
-                        label = stringResource(R.string.field_carbs),
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        NumberField(
+                            value = kcal,
+                            onValueChange = { input ->
+                                kcal = input
+                                setBasis(input) { basis.copy(kcal = it) }
+                            },
+                            label = stringResource(R.string.entry_field_kcal),
+                            modifier = Modifier.weight(1f)
+                        )
+                        NumberField(
+                            value = protein,
+                            onValueChange = { input ->
+                                protein = input
+                                setBasis(input) { basis.copy(protein = it) }
+                            },
+                            label = stringResource(R.string.entry_field_protein),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        NumberField(
+                            value = fat,
+                            onValueChange = { input ->
+                                fat = input
+                                setBasis(input) { basis.copy(fat = it) }
+                            },
+                            label = stringResource(R.string.entry_field_fat),
+                            modifier = Modifier.weight(1f)
+                        )
+                        NumberField(
+                            value = carbs,
+                            onValueChange = { input ->
+                                carbs = input
+                                setBasis(input) { basis.copy(carbs = it) }
+                            },
+                            label = stringResource(R.string.entry_field_carbs),
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                     Text(
                         text = stringResource(R.string.entry_form_hint),
                         style = MaterialTheme.typography.bodySmall.zh(),
@@ -222,7 +227,12 @@ fun EntryFormDialog(
                     )
                 }
 
-                MealPicker(selected = meal, onSelect = { meal = it })
+                // 本來就未分餐的紀錄才給「未分餐」這個選項；新增一律要選一餐
+                MealPicker(
+                    selected = meal,
+                    onSelect = { meal = it },
+                    allowNone = initial.meal == null
+                )
 
                 OutlinedTextField(
                     value = note,

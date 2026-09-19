@@ -204,7 +204,6 @@ fun TodayScreen(
         EntryFormDialog(
             viewModel = viewModel,
             initial = draftOf(entry),
-            editing = true,
             onConfirm = { draft ->
                 viewModel.updateEntry(entry, draft)
                 editing = null

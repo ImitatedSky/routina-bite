@@ -1,30 +1,44 @@
 package com.routina.bite.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -36,7 +50,12 @@ import com.routina.bite.data.recentFoods
 import com.routina.bite.data.searchFoods
 import com.routina.bite.model.Food
 import com.routina.bite.model.Meal
+import kotlinx.coroutines.launch
 
+/**
+ * 新增紀錄頁。表單直接長在頁面上：按了「新增」就可以開始打字，
+ * 下面的食物清單只是幫忙把表單填好，點一個食物＝用它的數值重填上面的表單。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddFoodScreen(
@@ -52,10 +71,11 @@ fun AddFoodScreen(
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val expanded by viewModel.expandedCategories.collectAsStateWithLifecycle()
 
-    var meal by remember { mutableStateOf(initialMeal) }
+    val state = rememberEntryFormState(draftOf(initialMeal))
     var query by remember { mutableStateOf("") }
-    var picked by remember { mutableStateOf<Food?>(null) }
-    var quickAdd by remember { mutableStateOf(false) }
+
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
 
     val frequent = frequentFoods(entries, foods)
     val recent = recentFoods(entries, foods)
@@ -63,6 +83,31 @@ fun AddFoodScreen(
     val groups = remember(foods) { groupByCategory(foods) }
 
     val editLabel = stringResource(R.string.action_edit)
+    val quickName = stringResource(R.string.add_quick)
+
+    // 選了照片又直接返回上一頁：那張檔案沒有紀錄會用到，留著就是孤兒檔
+    DisposableEffect(Unit) {
+        onDispose { state.dropNewPhotos(viewModel) }
+    }
+
+    fun fillFrom(food: Food) {
+        state.dropNewPhotos(viewModel)
+        state.loadFrom(draftOf(food, state.meal))
+        // 表單在最上面，捲回去才看得到剛剛填好的數字
+        scope.launch { listState.animateScrollToItem(0) }
+    }
+
+    fun add() {
+        val draft = state.toDraft(quickName) ?: return
+        state.commitPhotos(viewModel)
+        viewModel.addEntry(date, draft)
+        onDone()
+    }
+
+    fun clear() {
+        state.dropNewPhotos(viewModel)
+        state.reset()
+    }
 
     Scaffold(
         topBar = {
@@ -74,24 +119,66 @@ fun AddFoodScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            // 「加入」永遠看得到，選完食物不必再捲回去找按鈕
+            Surface(tonalElevation = 3.dp) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = { clear() }) {
+                        Text(stringResource(R.string.add_clear))
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Button(enabled = state.valid, onClick = { add() }) {
+                        Text(stringResource(R.string.action_add))
+                    }
+                }
+            }
         }
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(padding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item { MealPicker(selected = meal, onSelect = { picked -> picked?.let { meal = it } }) }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    MealPicker(
+                        selected = state.meal,
+                        onSelect = { picked -> picked?.let { state.meal = it } }
+                    )
+                    EntryFormFields(state = state, viewModel = viewModel, showMeal = false)
+                }
+            }
+
+            item { HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp)) }
+
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = onNewFood) {
+                        Text(stringResource(R.string.add_new_food))
+                    }
+                    TextButton(onClick = onOpenLibrary) {
+                        Text(stringResource(R.string.nav_library))
+                    }
+                }
+            }
 
             if (frequent.isNotEmpty()) {
                 item { SectionTitle(stringResource(R.string.add_frequent)) }
-                item { FoodChips(frequent) { picked = it } }
+                item { FoodChips(frequent) { fillFrom(it) } }
             }
             if (recent.isNotEmpty()) {
                 item { SectionTitle(stringResource(R.string.add_recent)) }
-                item { FoodChips(recent) { picked = it } }
+                item { FoodChips(recent) { fillFrom(it) } }
             }
 
             item {
@@ -102,20 +189,6 @@ fun AddFoodScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-            }
-
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = { quickAdd = true }) {
-                        Text(stringResource(R.string.add_quick))
-                    }
-                    OutlinedButton(onClick = onNewFood) {
-                        Text(stringResource(R.string.add_new_food))
-                    }
-                    OutlinedButton(onClick = onOpenLibrary) {
-                        Text(stringResource(R.string.nav_library))
-                    }
-                }
             }
 
             item {
@@ -138,7 +211,7 @@ fun AddFoodScreen(
                     onToggle = { category ->
                         viewModel.setCategoryExpanded(category, category !in expanded)
                     },
-                    onFoodClick = { picked = it },
+                    onFoodClick = { fillFrom(it) },
                     rowMenu = { food -> listOf(editLabel to { onEditFood(food.id) }) }
                 )
             } else if (results.isEmpty()) {
@@ -147,40 +220,12 @@ fun AddFoodScreen(
                 items(results, key = { it.id }) { food ->
                     FoodRow(
                         food = food,
-                        onClick = { picked = food },
+                        onClick = { fillFrom(food) },
                         menu = listOf(editLabel to { onEditFood(food.id) })
                     )
                 }
             }
         }
-    }
-
-    picked?.let { food ->
-        EntryFormDialog(
-            viewModel = viewModel,
-            initial = draftOf(food, meal),
-            editing = false,
-            onConfirm = { draft ->
-                viewModel.addEntry(date, draft)
-                picked = null
-                onDone()
-            },
-            onDismiss = { picked = null }
-        )
-    }
-
-    if (quickAdd) {
-        EntryFormDialog(
-            viewModel = viewModel,
-            initial = draftOf(meal),
-            editing = false,
-            onConfirm = { draft ->
-                viewModel.addEntry(date, draft)
-                quickAdd = false
-                onDone()
-            },
-            onDismiss = { quickAdd = false }
-        )
     }
 }
 

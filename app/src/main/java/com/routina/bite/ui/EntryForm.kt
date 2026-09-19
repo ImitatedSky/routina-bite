@@ -24,6 +24,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -36,7 +37,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.routina.bite.R
-import com.routina.bite.data.defaultMeal
 import com.routina.bite.model.DiaryEntry
 import com.routina.bite.model.Food
 import com.routina.bite.model.Meal
@@ -58,11 +58,11 @@ data class EntryDraft(
     val foodId: String? = null
 )
 
-/** 快速輸入：空白表單 */
-fun draftOf(meal: Meal) = EntryDraft(meal = meal)
+/** 空白表單 */
+fun draftOf(meal: Meal?) = EntryDraft(meal = meal)
 
 /** 從食物庫點一個食物：用它的數值把表單填好 */
-fun draftOf(food: Food, meal: Meal) = EntryDraft(
+fun draftOf(food: Food, meal: Meal?) = EntryDraft(
     name = food.name,
     servingGrams = food.servingGrams,
     basis = food.nutrients,
@@ -89,81 +89,149 @@ private enum class AmountEdit { NONE, SERVINGS, GRAMS }
 private val PHOTO_SIZE = 64.dp
 
 /**
- * 新增與編輯紀錄共用的表單。三個入口（快速輸入、點食物、編輯紀錄）的差別只在 [initial]。
+ * 表單的狀態。新增紀錄頁的內嵌表單與編輯紀錄的對話框共用這一份，
+ * 差別只在誰來畫、按鈕放哪裡。
  *
  * 連動規則：改份數或公克 → 四個營養欄以 basis × 份數 重算；
  * 直接改某個營養欄 → basis 的那一項改成 輸入值 ÷ 份數。最後動的那個就是使用者要的值。
- *
- * 照片要 [viewModel]：選到圖就得當場複製進 App 目錄（URI 的授權只在回呼那一趟有效），
- * 換照片與取消還要把不要的檔刪掉。
  */
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun EntryFormDialog(
-    viewModel: BiteViewModel,
-    initial: EntryDraft,
-    editing: Boolean,
-    onConfirm: (EntryDraft) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val servingGrams = initial.servingGrams?.takeIf { it > 0.0 }
-    val quickName = stringResource(R.string.add_quick)
+@Stable
+class EntryFormState(initial: EntryDraft) {
 
-    var name by remember { mutableStateOf(initial.name) }
-    var servings by remember { mutableStateOf(formatAmount(initial.servings)) }
-    var grams by remember {
-        mutableStateOf(servingGrams?.let { formatGrams(initial.servings * it) }.orEmpty())
+    /** 這張表單現在以哪一筆 draft 為底。點食物重填時會換成那個食物的 draft */
+    var source by mutableStateOf(initial)
+        private set
+
+    var name by mutableStateOf("")
+    var servings by mutableStateOf("")
+        private set
+    var grams by mutableStateOf("")
+        private set
+    var kcal by mutableStateOf("")
+        private set
+    var protein by mutableStateOf("")
+        private set
+    var fat by mutableStateOf("")
+        private set
+    var carbs by mutableStateOf("")
+        private set
+    var meal by mutableStateOf(initial.meal)
+    var note by mutableStateOf("")
+    var photo by mutableStateOf("")
+
+    /** 每一份的營養值；欄位顯示的是 basis × 份數 */
+    private var basis by mutableStateOf(initial.basis)
+    private var edited by mutableStateOf(AmountEdit.NONE)
+
+    private val added = mutableStateListOf<String>()
+
+    init {
+        loadFrom(initial)
     }
-    var kcal by remember { mutableStateOf(kcalText(initial.basis.kcal, initial.servings)) }
-    var protein by remember { mutableStateOf(gramsText(initial.basis.protein, initial.servings)) }
-    var fat by remember { mutableStateOf(gramsText(initial.basis.fat, initial.servings)) }
-    var carbs by remember { mutableStateOf(gramsText(initial.basis.carbs, initial.servings)) }
-    var meal by remember { mutableStateOf(initial.meal) }
-    var note by remember { mutableStateOf(initial.note) }
-    var basis by remember { mutableStateOf(initial.basis) }
-    var edited by remember { mutableStateOf(AmountEdit.NONE) }
 
-    var photo by remember { mutableStateOf(initial.photo) }
-    var viewingPhoto by remember { mutableStateOf(false) }
-    var photoFailed by remember { mutableStateOf(false) }
-    // 這次表單新寫進去的檔名。存檔時只留最終那一張，取消時全刪，才不會留下孤兒檔
-    val addedPhotos = remember { mutableStateListOf<String>() }
-    val scope = rememberCoroutineScope()
+    /** 這次表單新寫進 filesDir、還沒歸屬給任何紀錄的照片檔 */
+    val newPhotos: List<String> get() = added
 
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            val name = viewModel.importPhoto(uri)
-            photoFailed = name == null
-            if (name != null) {
-                addedPhotos += name
-                photo = name
-            }
+    /** 有每份公克基準才給公克欄 */
+    val servingGrams: Double? get() = source.servingGrams?.takeIf { it > 0.0 }
+
+    /** 本來就未分餐的紀錄才給「未分餐」這個選項；新增一律要選一餐 */
+    val allowNoMeal: Boolean get() = source.meal == null
+
+    val amount: Double?
+        get() = when (edited) {
+            AmountEdit.NONE -> source.servings
+            AmountEdit.SERVINGS -> servings.toDoubleOrNull()
+            // 公克是最後改的那一個，份數就用公克直接除回去算，不然 150 g 會存成 150.6 g
+            AmountEdit.GRAMS -> servingGrams?.let { grams.toDoubleOrNull()?.div(it) }
         }
+
+    val valid: Boolean get() = (amount ?: 0.0) > 0.0
+
+    fun updateServings(input: String) {
+        servings = input
+        edited = AmountEdit.SERVINGS
+        val value = input.toDoubleOrNull()
+        val perServing = servingGrams
+        if (perServing != null) {
+            grams = if (value == null) "" else formatGrams(value * perServing)
+        }
+        fillNutrients(value)
     }
 
-    fun pickPhoto() {
-        photoFailed = false
-        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    fun updateGrams(input: String) {
+        val perServing = servingGrams ?: return
+        grams = input
+        edited = AmountEdit.GRAMS
+        val value = input.toDoubleOrNull()?.div(perServing)
+        servings = if (value == null) "" else formatAmount(value)
+        fillNutrients(value)
     }
 
-    fun cancel() {
-        addedPhotos.forEach { viewModel.deletePhoto(it) }
-        onDismiss()
+    fun updateKcal(input: String) {
+        kcal = input
+        setBasis(input) { basis.copy(kcal = it) }
     }
 
-    val photoState = rememberPhoto(photo, with(LocalDensity.current) { PHOTO_SIZE.roundToPx() })
-    // 檔案不在（例如匯入了只有 JSON 的備份）就當作沒有照片，不顯示破圖
-    val hasPhoto = photo.isNotEmpty() && photoState !is PhotoState.Missing
-
-    val amount: Double? = when (edited) {
-        AmountEdit.NONE -> initial.servings
-        AmountEdit.SERVINGS -> servings.toDoubleOrNull()
-        // 公克是最後改的那一個，份數就用公克直接除回去算，不然 150 g 會存成 150.6 g
-        AmountEdit.GRAMS -> servingGrams?.let { grams.toDoubleOrNull()?.div(it) }
+    fun updateProtein(input: String) {
+        protein = input
+        setBasis(input) { basis.copy(protein = it) }
     }
 
-    fun fillNutrients(value: Double?) {
+    fun updateFat(input: String) {
+        fat = input
+        setBasis(input) { basis.copy(fat = it) }
+    }
+
+    fun updateCarbs(input: String) {
+        carbs = input
+        setBasis(input) { basis.copy(carbs = it) }
+    }
+
+    /** 選到照片。檔案在回呼當下就寫進去了，先記帳，存檔或放棄時才決定留不留 */
+    fun addPhoto(file: String) {
+        added += file
+        photo = file
+    }
+
+    fun forgetNewPhotos() = added.clear()
+
+    /** 點一個食物、或開一張新表單：用這筆 draft 重填每一個欄位 */
+    fun loadFrom(draft: EntryDraft) {
+        source = draft
+        name = draft.name
+        servings = formatAmount(draft.servings)
+        val perServing = draft.servingGrams?.takeIf { it > 0.0 }
+        grams = perServing?.let { formatGrams(draft.servings * it) }.orEmpty()
+        kcal = kcalText(draft.basis.kcal, draft.servings)
+        protein = gramsText(draft.basis.protein, draft.servings)
+        fat = gramsText(draft.basis.fat, draft.servings)
+        carbs = gramsText(draft.basis.carbs, draft.servings)
+        meal = draft.meal
+        note = draft.note
+        photo = draft.photo
+        basis = draft.basis
+        edited = AmountEdit.NONE
+    }
+
+    /** 清空：回到空白表單，只留目前選的餐別 */
+    fun reset() = loadFrom(draftOf(meal))
+
+    /** 表單內容做成一筆 draft。份數不合法時回 null（按鈕本來就停用，這裡只是不讓它漏過去） */
+    fun toDraft(quickName: String): EntryDraft? {
+        val value = amount ?: return null
+        return source.copy(
+            name = name.trim().ifEmpty { quickName },
+            servings = value,
+            basis = basis,
+            meal = meal,
+            note = note.trim(),
+            photo = photo
+        )
+    }
+
+    /** 份數或公克改了：四個營養欄以 basis × 份數 重算 */
+    private fun fillNutrients(value: Double?) {
         if (value == null) return
         kcal = kcalText(basis.kcal, value)
         protein = gramsText(basis.protein, value)
@@ -172,220 +240,247 @@ fun EntryFormDialog(
     }
 
     // 直接改營養欄：把每份值改成 輸入值 ÷ 份數。份數還不合法就只改文字，等份數修好再算
-    fun setBasis(input: String, apply: (Double) -> Nutrients) {
+    private fun setBasis(input: String, apply: (Double) -> Nutrients) {
         val entered = if (input.isBlank()) 0.0 else input.toDoubleOrNull() ?: return
         val value = amount ?: return
         if (value <= 0.0) return
         basis = apply(entered / value)
     }
+}
 
-    val valid = amount != null && amount > 0.0
+@Composable
+fun rememberEntryFormState(initial: EntryDraft): EntryFormState = remember { EntryFormState(initial) }
+
+/** 存檔成功：留下的那張照片歸紀錄所有，換掉的與這次沒用上的都刪掉 */
+fun EntryFormState.commitPhotos(viewModel: BiteViewModel) {
+    newPhotos.forEach { if (it != photo) viewModel.deletePhoto(it) }
+    if (source.photo.isNotEmpty() && source.photo != photo) viewModel.deletePhoto(source.photo)
+    forgetNewPhotos()
+}
+
+/**
+ * 放棄這次的輸入（取消對話框、清空表單、離開新增頁）：這次新寫的檔全刪，
+ * 既有紀錄原本的照片留著。
+ */
+fun EntryFormState.dropNewPhotos(viewModel: BiteViewModel) {
+    newPhotos.forEach { viewModel.deletePhoto(it) }
+    forgetNewPhotos()
+}
+
+/**
+ * 表單的欄位本體。編輯對話框與新增紀錄頁畫的是同一份。
+ *
+ * [showMeal] 在新增紀錄頁是 false：那裡的餐別晶片在頁面最上面，不由表單畫。
+ *
+ * 照片要 [viewModel]：選到圖就得當場複製進 App 目錄（URI 的授權只在回呼那一趟有效）。
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun EntryFormFields(
+    state: EntryFormState,
+    viewModel: BiteViewModel,
+    modifier: Modifier = Modifier,
+    showMeal: Boolean = true
+) {
+    val quickName = stringResource(R.string.add_quick)
+    var viewingPhoto by remember { mutableStateOf(false) }
+    var photoFailed by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val file = viewModel.importPhoto(uri)
+            photoFailed = file == null
+            if (file != null) state.addPhoto(file)
+        }
+    }
+
+    fun pickPhoto() {
+        photoFailed = false
+        picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+    }
+
+    val photoState = rememberPhoto(state.photo, with(LocalDensity.current) { PHOTO_SIZE.roundToPx() })
+    // 檔案不在（例如匯入了只有 JSON 的備份）就當作沒有照片，不顯示破圖
+    val hasPhoto = state.photo.isNotEmpty() && photoState !is PhotoState.Missing
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        OutlinedTextField(
+            value = state.name,
+            onValueChange = { state.name = it },
+            label = { Text(stringResource(R.string.field_name)) },
+            // 預設值只在存檔時補上，不先塞進欄位讓使用者刪
+            placeholder = { Text(quickName) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NumberField(
+                value = state.servings,
+                onValueChange = { state.updateServings(it) },
+                label = stringResource(R.string.add_servings),
+                modifier = Modifier.weight(1f)
+            )
+            if (state.servingGrams != null) {
+                NumberField(
+                    value = state.grams,
+                    onValueChange = { state.updateGrams(it) },
+                    label = stringResource(R.string.add_grams),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        // 四個營養欄排成兩欄，表單才不會長到備註要捲兩次才看得到
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumberField(
+                    value = state.kcal,
+                    onValueChange = { state.updateKcal(it) },
+                    label = stringResource(R.string.entry_field_kcal),
+                    modifier = Modifier.weight(1f)
+                )
+                NumberField(
+                    value = state.protein,
+                    onValueChange = { state.updateProtein(it) },
+                    label = stringResource(R.string.entry_field_protein),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumberField(
+                    value = state.fat,
+                    onValueChange = { state.updateFat(it) },
+                    label = stringResource(R.string.entry_field_fat),
+                    modifier = Modifier.weight(1f)
+                )
+                NumberField(
+                    value = state.carbs,
+                    onValueChange = { state.updateCarbs(it) },
+                    label = stringResource(R.string.entry_field_carbs),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Text(
+                text = stringResource(R.string.entry_form_hint),
+                style = MaterialTheme.typography.bodySmall.zh(),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        if (showMeal) {
+            MealPicker(
+                selected = state.meal,
+                onSelect = { state.meal = it },
+                allowNone = state.allowNoMeal
+            )
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (hasPhoto) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    PhotoThumb(
+                        state = photoState,
+                        size = PHOTO_SIZE,
+                        corner = 8.dp,
+                        modifier = Modifier.combinedClickable(
+                            onClick = { pickPhoto() },
+                            onLongClick = { viewingPhoto = true }
+                        )
+                    )
+                    Text(
+                        text = stringResource(R.string.photo_hint),
+                        style = MaterialTheme.typography.bodySmall.zh(),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { state.photo = "" }) {
+                        Icon(Icons.Default.Close, stringResource(R.string.photo_remove))
+                    }
+                }
+            } else {
+                OutlinedButton(onClick = { pickPhoto() }) {
+                    Icon(Icons.Default.AddAPhoto, contentDescription = null)
+                    Text(
+                        text = stringResource(R.string.photo_add),
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+            }
+            if (photoFailed) {
+                Text(
+                    text = stringResource(R.string.photo_failed),
+                    style = MaterialTheme.typography.bodySmall.zh(),
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+
+        OutlinedTextField(
+            value = state.note,
+            onValueChange = { state.note = it },
+            label = { Text(stringResource(R.string.entry_note)) },
+            placeholder = { Text(stringResource(R.string.entry_note_hint)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+
+    if (viewingPhoto) {
+        PhotoViewerDialog(name = state.photo, onDismiss = { viewingPhoto = false })
+    }
+}
+
+/**
+ * 編輯既有紀錄的對話框。新增走的是新增紀錄頁上的內嵌表單，
+ * 這裡只剩「改一筆」這個情境——對話框正好合適。
+ */
+@Composable
+fun EntryFormDialog(
+    viewModel: BiteViewModel,
+    initial: EntryDraft,
+    onConfirm: (EntryDraft) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val state = rememberEntryFormState(initial)
+    val quickName = stringResource(R.string.add_quick)
+
+    fun cancel() {
+        state.dropNewPhotos(viewModel)
+        onDismiss()
+    }
 
     AlertDialog(
         onDismissRequest = { cancel() },
-        title = {
-            Text(
-                text = if (editing) {
-                    stringResource(R.string.entry_edit_title)
-                } else {
-                    stringResource(R.string.add_title)
-                }
-            )
-        },
+        title = { Text(stringResource(R.string.entry_edit_title)) },
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text(stringResource(R.string.field_name)) },
-                    // 預設值只在存檔時補上，不先塞進欄位讓使用者刪
-                    placeholder = { Text(quickName) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    NumberField(
-                        value = servings,
-                        onValueChange = { input ->
-                            servings = input
-                            edited = AmountEdit.SERVINGS
-                            val value = input.toDoubleOrNull()
-                            if (servingGrams != null) {
-                                grams = if (value == null) "" else formatGrams(value * servingGrams)
-                            }
-                            fillNutrients(value)
-                        },
-                        label = stringResource(R.string.add_servings),
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (servingGrams != null) {
-                        NumberField(
-                            value = grams,
-                            onValueChange = { input ->
-                                grams = input
-                                edited = AmountEdit.GRAMS
-                                val value = input.toDoubleOrNull()?.div(servingGrams)
-                                servings = if (value == null) "" else formatAmount(value)
-                                fillNutrients(value)
-                            },
-                            label = stringResource(R.string.add_grams),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
-                // 四個營養欄排成兩欄，表單才不會長到備註要捲兩次才看得到
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        NumberField(
-                            value = kcal,
-                            onValueChange = { input ->
-                                kcal = input
-                                setBasis(input) { basis.copy(kcal = it) }
-                            },
-                            label = stringResource(R.string.entry_field_kcal),
-                            modifier = Modifier.weight(1f)
-                        )
-                        NumberField(
-                            value = protein,
-                            onValueChange = { input ->
-                                protein = input
-                                setBasis(input) { basis.copy(protein = it) }
-                            },
-                            label = stringResource(R.string.entry_field_protein),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        NumberField(
-                            value = fat,
-                            onValueChange = { input ->
-                                fat = input
-                                setBasis(input) { basis.copy(fat = it) }
-                            },
-                            label = stringResource(R.string.entry_field_fat),
-                            modifier = Modifier.weight(1f)
-                        )
-                        NumberField(
-                            value = carbs,
-                            onValueChange = { input ->
-                                carbs = input
-                                setBasis(input) { basis.copy(carbs = it) }
-                            },
-                            label = stringResource(R.string.entry_field_carbs),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Text(
-                        text = stringResource(R.string.entry_form_hint),
-                        style = MaterialTheme.typography.bodySmall.zh(),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // 本來就未分餐的紀錄才給「未分餐」這個選項；新增一律要選一餐
-                MealPicker(
-                    selected = meal,
-                    onSelect = { meal = it },
-                    allowNone = initial.meal == null
-                )
-
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (hasPhoto) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            PhotoThumb(
-                                state = photoState,
-                                size = PHOTO_SIZE,
-                                corner = 8.dp,
-                                modifier = Modifier.combinedClickable(
-                                    onClick = { pickPhoto() },
-                                    onLongClick = { viewingPhoto = true }
-                                )
-                            )
-                            Text(
-                                text = stringResource(R.string.photo_hint),
-                                style = MaterialTheme.typography.bodySmall.zh(),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.weight(1f)
-                            )
-                            IconButton(onClick = { photo = "" }) {
-                                Icon(Icons.Default.Close, stringResource(R.string.photo_remove))
-                            }
-                        }
-                    } else {
-                        OutlinedButton(onClick = { pickPhoto() }) {
-                            Icon(Icons.Default.AddAPhoto, contentDescription = null)
-                            Text(
-                                text = stringResource(R.string.photo_add),
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
-                        }
-                    }
-                    if (photoFailed) {
-                        Text(
-                            text = stringResource(R.string.photo_failed),
-                            style = MaterialTheme.typography.bodySmall.zh(),
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-
-                OutlinedTextField(
-                    value = note,
-                    onValueChange = { note = it },
-                    label = { Text(stringResource(R.string.entry_note)) },
-                    placeholder = { Text(stringResource(R.string.entry_note_hint)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+            EntryFormFields(
+                state = state,
+                viewModel = viewModel,
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            )
         },
         confirmButton = {
             TextButton(
-                enabled = valid,
+                enabled = state.valid,
                 onClick = {
-                    val value = amount ?: return@TextButton
-                    // 換掉或移除的照片在這裡才刪：表單中途改了主意不算數
-                    addedPhotos.forEach { if (it != photo) viewModel.deletePhoto(it) }
-                    if (initial.photo.isNotEmpty() && initial.photo != photo) {
-                        viewModel.deletePhoto(initial.photo)
-                    }
-                    onConfirm(
-                        initial.copy(
-                            name = name.trim().ifEmpty { quickName },
-                            servings = value,
-                            basis = basis,
-                            meal = meal,
-                            note = note.trim(),
-                            photo = photo
-                        )
-                    )
+                    val draft = state.toDraft(quickName) ?: return@TextButton
+                    state.commitPhotos(viewModel)
+                    onConfirm(draft)
                 }
             ) {
-                Text(
-                    text = if (editing) {
-                        stringResource(R.string.action_save)
-                    } else {
-                        stringResource(R.string.action_add)
-                    }
-                )
+                Text(stringResource(R.string.action_save))
             }
         },
         dismissButton = {
             TextButton(onClick = { cancel() }) { Text(stringResource(R.string.action_cancel)) }
         }
     )
-
-    if (viewingPhoto) {
-        PhotoViewerDialog(name = photo, onDismiss = { viewingPhoto = false })
-    }
 }
 
 // 每份值是 0 就讓欄位留白：空白在這個 App 裡本來就當作 0，印一排 0 反而又要先刪字

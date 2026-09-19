@@ -75,7 +75,6 @@
     <string name="add_servings">份數</string>
     <string name="add_grams">公克</string>
     <string name="add_per_serving">每份 %1$s g</string>
-    <string name="add_amount_hint">份數與公克擇一填，改一邊另一邊會跟著算</string>
 
     <!-- 食物庫 -->
     <string name="library_title">食物庫</string>
@@ -228,4 +227,7 @@
     <string name="water_custom_title">加入水量</string>
     <string name="water_field">毫升</string>
     <string name="field_target_water">喝水目標（ml）</string>
+
+    <!-- 新增紀錄頁的內嵌表單 -->
+    <string name="add_clear">清空</string>
 </resources>

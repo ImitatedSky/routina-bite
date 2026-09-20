@@ -247,4 +247,11 @@
     <string name="settings_pin_log_meal">記一餐</string>
     <string name="action_pin_shortcut">加到桌面</string>
     <string name="shortcut_pin_unsupported">這個桌面不支援釘選捷徑，請改用長按 App 圖示</string>
+
+    <!-- 桌面小工具 -->
+    <string name="widget_description">今天還剩多少大卡、喝了多少水；一按就記一杯水或開新增紀錄</string>
+    <string name="widget_remaining">剩餘</string>
+    <string name="widget_water_amount">%1$d / %2$d ml</string>
+    <string name="widget_add_water">+250 水</string>
+    <string name="widget_log_meal">記一餐</string>
 </resources>

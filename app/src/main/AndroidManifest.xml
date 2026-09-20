@@ -84,6 +84,26 @@
             </intent-filter>
         </activity>
 
+        <!--
+          桌面小工具。exported 是必要的：APPWIDGET_UPDATE 與 DATE_CHANGED
+          都是系統（另一個 uid）發出來的；這幾個又都是 protected broadcast，
+          一般 App 發不了，所以對外不多開任何實際入口。
+          DATE_CHANGED / TIMEZONE_CHANGED 用來跨日重畫，不然過了午夜還顯示昨天的數字。
+        -->
+        <receiver
+            android:name=".BiteWidgetProvider"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/bite_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>

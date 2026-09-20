@@ -2,4 +2,19 @@
 <resources>
     <!-- 啟動圖示的底色，取自圖示本身的奶油色，前景疊上去才不會有接縫 -->
     <color name="ic_launcher_background">#FBF4E2</color>
+
+    <!--
+      桌面小工具的顏色。RemoteViews 由桌面那支 App 畫，解不到 Bite 的 Compose 主題，
+      所以在這裡定義一組具名顏色，深色版本放 values-night/colors.xml，由桌面的設定決定用哪一組。
+    -->
+    <color name="widget_background">#FBF4E2</color>
+    <color name="widget_text">#2B2823</color>
+    <color name="widget_text_dim">#6E675A</color>
+    <color name="widget_track">#E7DCC4</color>
+    <!-- 熱量用家族主色，與 FamilyColors.Primary 同值 -->
+    <color name="widget_kcal">#4B5699</color>
+    <!-- 喝水：低飽和的偏青藍，與主色（靛藍）和三大營養素色都分得開 -->
+    <color name="widget_water">#4C87A8</color>
+    <color name="widget_button_fill">#F3E9D2</color>
+    <color name="widget_button_stroke">#D6C7A6</color>
 </resources>

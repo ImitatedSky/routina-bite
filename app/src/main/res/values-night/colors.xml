@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 小工具的深色版本：同一組名稱，底色換成暖調的深灰，前景色提亮到深底上讀得清楚 -->
+    <color name="widget_background">#23211D</color>
+    <color name="widget_text">#EFE8D9</color>
+    <color name="widget_text_dim">#A79F90</color>
+    <color name="widget_track">#3A362F</color>
+    <color name="widget_kcal">#8F99DE</color>
+    <color name="widget_water">#74A9C4</color>
+    <color name="widget_button_fill">#2E2B25</color>
+    <color name="widget_button_stroke">#4A453C</color>
+</resources>

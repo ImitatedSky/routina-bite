@@ -22,3 +22,4 @@
 -keep class com.routina.bite.MainActivity
 -keep class com.routina.bite.CapabilityActivity
 -keep class com.routina.bite.ShortcutActivity
+-keep class com.routina.bite.BiteWidgetProvider

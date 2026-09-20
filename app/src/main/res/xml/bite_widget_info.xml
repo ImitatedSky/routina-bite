@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  4×2 預設（一格約 70dp，n 格 = 70n − 30，2 格 = 110dp）。版面就是照這個高度設計的：
+  上半部一行字 + 進度條（約 47dp）、下面固定 40dp 的按鈕列，加內距共約 105dp，留一點餘裕。
+  updatePeriodMillis 是保險用的（系統實際最短 30 分鐘）：真正的即時更新由
+  BiteApp 觀察資料流觸發，跨日由 receiver 的 DATE_CHANGED 觸發。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/bite_widget"
+    android:minHeight="110dp"
+    android:minResizeHeight="110dp"
+    android:minResizeWidth="180dp"
+    android:minWidth="250dp"
+    android:previewLayout="@layout/bite_widget"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="2"
+    android:targetCellWidth="4"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen"
+    tools:targetApi="31" />

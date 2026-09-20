@@ -9,4 +9,9 @@
     <color name="widget_water">#74A9C4</color>
     <color name="widget_button_fill">#2E2B25</color>
     <color name="widget_button_stroke">#4A453C</color>
+
+    <!-- 深色底上要提亮一階，原值在深色背景上對比不夠 -->
+    <color name="widget_macro_protein">#79B9A7</color>
+    <color name="widget_macro_fat">#DFAE82</color>
+    <color name="widget_macro_carbs">#B3A4DA</color>
 </resources>

@@ -109,6 +109,9 @@ class EntryFormState(initial: EntryDraft) {
         private set
     var kcal by mutableStateOf("")
         private set
+
+    /** 熱量是使用者自己填的（或食物庫帶來的標示值），別被三大營養素的換算蓋掉 */
+    private var kcalIsManual = initial.basis.kcal > 0.0
     var protein by mutableStateOf("")
         private set
     var fat by mutableStateOf("")
@@ -168,24 +171,46 @@ class EntryFormState(initial: EntryDraft) {
         fillNutrients(value)
     }
 
+    /**
+     * 熱量欄。使用者一動它就記成「自己填的」，之後改三大營養素不再覆蓋它；
+     * 清空熱量欄就交還給自動換算（這是唯一回到自動的方式，也是最直覺的：欄位空了就讓它自己算）。
+     */
     fun updateKcal(input: String) {
         kcal = input
+        kcalIsManual = input.isNotBlank()
         setBasis(input) { basis.copy(kcal = it) }
+        if (!kcalIsManual) recalcKcalFromMacros()
     }
 
     fun updateProtein(input: String) {
         protein = input
         setBasis(input) { basis.copy(protein = it) }
+        recalcKcalFromMacros()
     }
 
     fun updateFat(input: String) {
         fat = input
         setBasis(input) { basis.copy(fat = it) }
+        recalcKcalFromMacros()
     }
 
     fun updateCarbs(input: String) {
         carbs = input
         setBasis(input) { basis.copy(carbs = it) }
+        recalcKcalFromMacros()
+    }
+
+    /**
+     * 三大營養素換算熱量：蛋白質與碳水 4 kcal/g、脂肪 9 kcal/g。
+     * 只在使用者沒有自己填熱量時才算——食物庫帶進來的熱量是標示值，
+     * 標示值本來就不會等於這個換算（[DayCompositionCard] 的註解講過同一件事），不該被蓋掉。
+     */
+    private fun recalcKcalFromMacros() {
+        if (kcalIsManual) return
+        val perServing = basis.protein * 4 + basis.fat * 9 + basis.carbs * 4
+        basis = basis.copy(kcal = perServing)
+        val value = amount ?: return
+        kcal = kcalText(perServing, value)
     }
 
     /** 選到照片。檔案在回呼當下就寫進去了，先記帳，存檔或放棄時才決定留不留 */
@@ -212,6 +237,8 @@ class EntryFormState(initial: EntryDraft) {
         photo = draft.photo
         basis = draft.basis
         edited = AmountEdit.NONE
+        // 食物庫帶進來的熱量是標示值，算是「已經指定」；空白表單才交給自動換算
+        kcalIsManual = draft.basis.kcal > 0.0
     }
 
     /** 清空：回到空白表單，只留目前選的餐別 */

@@ -34,7 +34,10 @@ class BiteApp : Application() {
         // 所以在 App 裡記一筆、按小工具的 +250、匯入備份都會即時反映。
         scope.launch {
             combine(repository.entries, repository.water, repository.targets) { _, _, _ -> }
-                .collect { updateWidgets(this@BiteApp) }
+                .collect {
+                    updateWidgets(this@BiteApp)
+                    updateMacroWidgets(this@BiteApp)
+                }
         }
     }
 }

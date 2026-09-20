@@ -104,6 +104,21 @@
                 android:resource="@xml/bite_widget_info" />
         </receiver>
 
+        <!-- 今日營養：熱量與三大營養素，純顯示，點一下開今日頁 -->
+        <receiver
+            android:name=".BiteMacroWidgetProvider"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/bite_macro_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>

@@ -200,7 +200,7 @@
     <string name="composition_value">%1$d 大卡 · %2$d%%</string>
 
     <!-- 紀錄表單（新增與編輯共用） -->
-    <string name="entry_form_hint">數字是這一筆的總量，改份數會跟著算</string>
+    <string name="entry_form_hint">數字是這一筆的總量，改份數會跟著算。填了三大營養素會自動算熱量，想自己填就直接改熱量欄（清空即回到自動）</string>
     <string name="entry_note">備註（可留空）</string>
     <string name="entry_note_hint">例如：加蛋、外食</string>
 
@@ -254,4 +254,9 @@
     <string name="widget_water_amount">%1$d / %2$d ml</string>
     <string name="widget_add_water">+250 水</string>
     <string name="widget_log_meal">記一餐</string>
+
+    <!-- 今日營養小工具 -->
+    <string name="macro_widget_description">今天吃了多少熱量，以及蛋白質、脂肪、碳水各幾公克</string>
+    <string name="macro_widget_kcal">%1$d / %2$d 大卡</string>
+    <string name="macro_widget_grams">%1$.1f g</string>
 </resources>

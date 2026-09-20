@@ -17,4 +17,9 @@
     <color name="widget_water">#4C87A8</color>
     <color name="widget_button_fill">#F3E9D2</color>
     <color name="widget_button_stroke">#D6C7A6</color>
+
+    <!-- 三大營養素，與 App 內的 MacroColors 同值 -->
+    <color name="widget_macro_protein">#4E8A7B</color>
+    <color name="widget_macro_fat">#C2895A</color>
+    <color name="widget_macro_carbs">#8A7BB5</color>
 </resources>

@@ -107,7 +107,7 @@
     <string name="error_kcal_required">熱量必填</string>
     <string name="food_delete_title">刪除這個食物？</string>
     <string name="food_delete_message">已經記錄過的紀錄不受影響。</string>
-    <string name="food_blank_hint">空白的欄位當作 0。</string>
+    <string name="food_blank_hint">空白的欄位當作 0。填了蛋白質、脂肪、碳水會自動算熱量，想自己填就直接改熱量欄（清空即回到自動）。</string>
 
     <!-- 歷史 -->
     <string name="history_title">歷史</string>

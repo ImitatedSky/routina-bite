@@ -60,6 +60,19 @@ fun FoodEditScreen(
     var sodium by remember { mutableStateOf(existing.gramsOf { it.sodium }) }
     var cholesterol by remember { mutableStateOf(existing.gramsOf { it.cholesterol }) }
     var note by remember { mutableStateOf(existing?.note.orEmpty()) }
+
+    // 熱量是使用者自己填的（或既有食物本來就有的標示值），別被三大營養素的換算蓋掉。
+    // 與新增紀錄的表單同一條規則，見 add-macro-widget 的 D64/D65。
+    var kcalIsManual by remember { mutableStateOf((existing?.nutrients?.kcal ?: 0.0) > 0.0) }
+
+    // 這裡的欄位就是「每一份」的值，不像紀錄表單還要乘份數，所以直接加總即可
+    fun recalcKcal() {
+        if (kcalIsManual) return
+        val sum = (protein.toDoubleOrNull() ?: 0.0) * 4 +
+            (fat.toDoubleOrNull() ?: 0.0) * 9 +
+            (carbs.toDoubleOrNull() ?: 0.0) * 4
+        kcal = if (sum <= 0.0) "" else formatKcal(sum).toString()
+    }
     var category by remember { mutableStateOf(existing?.category.orEmpty()) }
     var favorite by remember { mutableStateOf(existing?.favorite ?: false) }
 
@@ -154,7 +167,12 @@ fun FoodEditScreen(
             )
             NumberField(
                 value = kcal,
-                onValueChange = { kcal = it },
+                onValueChange = {
+                    kcal = it
+                    // 清空熱量欄＝交還自動換算，與紀錄表單一致
+                    kcalIsManual = it.isNotBlank()
+                    if (!kcalIsManual) recalcKcal()
+                },
                 label = stringResource(R.string.field_kcal),
                 isError = showErrors && kcalError,
                 errorText = stringResource(R.string.error_kcal_required),
@@ -165,11 +183,11 @@ fun FoodEditScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            NumberField(protein, { protein = it }, stringResource(R.string.field_protein), Modifier.fillMaxWidth())
-            NumberField(fat, { fat = it }, stringResource(R.string.field_fat), Modifier.fillMaxWidth())
+            NumberField(protein, { protein = it; recalcKcal() }, stringResource(R.string.field_protein), Modifier.fillMaxWidth())
+            NumberField(fat, { fat = it; recalcKcal() }, stringResource(R.string.field_fat), Modifier.fillMaxWidth())
             NumberField(satFat, { satFat = it }, stringResource(R.string.field_sat_fat), Modifier.fillMaxWidth())
             NumberField(transFat, { transFat = it }, stringResource(R.string.field_trans_fat), Modifier.fillMaxWidth())
-            NumberField(carbs, { carbs = it }, stringResource(R.string.field_carbs), Modifier.fillMaxWidth())
+            NumberField(carbs, { carbs = it; recalcKcal() }, stringResource(R.string.field_carbs), Modifier.fillMaxWidth())
             NumberField(sugar, { sugar = it }, stringResource(R.string.field_sugar), Modifier.fillMaxWidth())
             NumberField(sodium, { sodium = it }, stringResource(R.string.field_sodium), Modifier.fillMaxWidth())
             NumberField(

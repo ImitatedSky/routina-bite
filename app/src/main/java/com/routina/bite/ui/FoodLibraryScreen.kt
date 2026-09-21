@@ -91,7 +91,7 @@ fun FoodLibraryScreen(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    label = { Text(stringResource(R.string.add_search_hint)) },
+                    label = { Text(stringResource(R.string.library_search_hint)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )

@@ -72,13 +72,15 @@ fun AddFoodScreen(
     val expanded by viewModel.expandedCategories.collectAsStateWithLifecycle()
 
     val state = rememberEntryFormState(draftOf(initialMeal))
-    var query by remember { mutableStateOf("") }
 
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
 
     val frequent = frequentFoods(entries, foods)
     val recent = recentFoods(entries, foods)
+    // 上面那個名稱欄同時就是食物庫的篩選條件：使用者打的字要嘛是他要記的東西的名字，
+    // 要嘛是他想找的食物，兩者是同一件事，沒必要再給第二個輸入框
+    val query = state.name
     val results = searchFoods(foods, query)
     val groups = remember(foods) { groupByCategory(foods) }
 
@@ -172,23 +174,16 @@ fun AddFoodScreen(
                 }
             }
 
-            if (frequent.isNotEmpty()) {
-                item { SectionTitle(stringResource(R.string.add_frequent)) }
-                item { FoodChips(frequent) { fillFrom(it) } }
-            }
-            if (recent.isNotEmpty()) {
-                item { SectionTitle(stringResource(R.string.add_recent)) }
-                item { FoodChips(recent) { fillFrom(it) } }
-            }
-
-            item {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    label = { Text(stringResource(R.string.add_search_hint)) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            // 名稱還空著才顯示捷徑；開始打字之後畫面只留篩選結果，不然一堆不相干的東西擋路
+            if (query.isBlank()) {
+                if (frequent.isNotEmpty()) {
+                    item { SectionTitle(stringResource(R.string.add_frequent)) }
+                    item { FoodChips(frequent) { fillFrom(it) } }
+                }
+                if (recent.isNotEmpty()) {
+                    item { SectionTitle(stringResource(R.string.add_recent)) }
+                    item { FoodChips(recent) { fillFrom(it) } }
+                }
             }
 
             item {
@@ -196,7 +191,7 @@ fun AddFoodScreen(
                     if (query.isBlank()) {
                         stringResource(R.string.add_all_foods)
                     } else {
-                        stringResource(R.string.add_results)
+                        stringResource(R.string.add_results_for, query)
                     }
                 )
             }

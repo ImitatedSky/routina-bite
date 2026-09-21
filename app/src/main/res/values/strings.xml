@@ -65,8 +65,8 @@
     <string name="add_title">新增紀錄</string>
     <string name="add_frequent">常吃</string>
     <string name="add_recent">最近</string>
-    <string name="add_search_hint">搜尋食物（名稱或備註）</string>
-    <string name="add_results">搜尋結果</string>
+    <string name="add_results_for">符合「%1$s」的食物</string>
+    <string name="library_search_hint">搜尋食物（名稱或備註）</string>
     <string name="add_all_foods">食物庫</string>
     <string name="add_no_results">找不到符合的食物</string>
     <string name="add_library_empty">食物庫是空的，先新建一個食物</string>

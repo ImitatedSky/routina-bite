@@ -89,11 +89,13 @@
           都是系統（另一個 uid）發出來的；這幾個又都是 protected broadcast，
           一般 App 發不了，所以對外不多開任何實際入口。
           DATE_CHANGED / TIMEZONE_CHANGED 用來跨日重畫，不然過了午夜還顯示昨天的數字。
+          三個 receiver 的 label 要各不相同：小工具選單列的是 label，
+          都寫 app_name 的話三個都叫「Routina Bite」，使用者選不出想要的那個。
         -->
         <receiver
             android:name=".BiteWidgetProvider"
             android:exported="true"
-            android:label="@string/app_name">
+            android:label="@string/widget_label_today">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="android.intent.action.DATE_CHANGED" />
@@ -108,7 +110,7 @@
         <receiver
             android:name=".BiteMacroWidgetProvider"
             android:exported="true"
-            android:label="@string/app_name">
+            android:label="@string/widget_label_macro">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="android.intent.action.DATE_CHANGED" />
@@ -117,6 +119,21 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/bite_macro_widget_info" />
+        </receiver>
+
+        <!-- 喝水：1×1，整塊就是一顆「+250」，點了直接記，不開畫面 -->
+        <receiver
+            android:name=".BiteWaterWidgetProvider"
+            android:exported="true"
+            android:label="@string/widget_label_water">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/bite_water_widget_info" />
         </receiver>
 
     </application>

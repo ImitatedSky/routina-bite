@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  喝水：整塊就是一顆按鈕（點一下就記 250 ml），所以底色用按鈕的填色與外框，
+  和另外兩個「點了會開 App」的小工具在外觀上分得開。
+  只有一個版面，字級由程式依尺寸調整。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/water_widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bite_water_widget_background"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="1dp">
+
+    <TextView
+        android:id="@+id/water_widget_add"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:text="@string/water_widget_add"
+        android:textColor="@color/widget_water"
+        android:textSize="20sp" />
+
+    <TextView
+        android:id="@+id/water_widget_total"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="@color/widget_text_dim"
+        android:textSize="10sp" />
+</LinearLayout>

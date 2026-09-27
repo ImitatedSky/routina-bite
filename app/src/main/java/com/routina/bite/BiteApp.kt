@@ -37,6 +37,7 @@ class BiteApp : Application() {
                 .collect {
                     updateWidgets(this@BiteApp)
                     updateMacroWidgets(this@BiteApp)
+                    updateWaterWidgets(this@BiteApp)
                 }
         }
     }

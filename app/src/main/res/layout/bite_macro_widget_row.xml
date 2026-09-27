@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  矮而寬：一行熱量加三個營養素的數字，沒有進度條——一格高只放得下一行字，
+  進度條會讓字被裁掉。三個數字各用自己的顏色，掃一眼就認得出誰是誰。
+  三個營養素那組由程式依寬度決定顯不顯示（4×1 才擠得下，2×1 會被裁到看不懂）。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/macro_widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bite_widget_background"
+    android:baselineAligned="false"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingLeft="8dp"
+    android:paddingTop="2dp"
+    android:paddingRight="8dp"
+    android:paddingBottom="2dp">
+
+    <TextView
+        android:id="@+id/macro_widget_kcal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:includeFontPadding="false"
+        android:maxLines="1"
+        android:textColor="@color/widget_text"
+        android:textSize="14sp" />
+
+    <LinearLayout
+        android:id="@+id/macro_widget_macros"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_weight="1"
+        android:gravity="end|center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/macro_widget_protein"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_macro_protein"
+            android:textSize="11sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="4dp"
+            android:layout_marginRight="4dp"
+            android:includeFontPadding="false"
+            android:text="@string/widget_separator"
+            android:textColor="@color/widget_text_dim"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/macro_widget_fat"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_macro_fat"
+            android:textSize="11sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="4dp"
+            android:layout_marginRight="4dp"
+            android:includeFontPadding="false"
+            android:text="@string/widget_separator"
+            android:textColor="@color/widget_text_dim"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/macro_widget_carbs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_macro_carbs"
+            android:textSize="11sp" />
+    </LinearLayout>
+</LinearLayout>

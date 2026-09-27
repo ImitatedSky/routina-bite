@@ -24,3 +24,4 @@
 -keep class com.routina.bite.ShortcutActivity
 -keep class com.routina.bite.BiteWidgetProvider
 -keep class com.routina.bite.BiteMacroWidgetProvider
+-keep class com.routina.bite.BiteWaterWidgetProvider

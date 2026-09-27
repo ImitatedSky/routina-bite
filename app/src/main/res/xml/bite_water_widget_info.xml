@@ -1,19 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  與「今日」同樣的尺寸規則：預設 4×2，可縮到 1×1，三種尺寸三個版面（D77）。
+  1×1 的動作型小工具：預設就只佔一格，放大也還是同一個版面（字級變大而已）。
+  minWidth/minHeight 40dp 是桌面一格的最小值（70n − 30，n=1）。
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:description="@string/macro_widget_description"
-    android:initialLayout="@layout/bite_macro_widget"
+    android:description="@string/water_widget_description"
+    android:initialLayout="@layout/bite_water_widget"
     android:minHeight="40dp"
     android:minResizeHeight="40dp"
     android:minResizeWidth="40dp"
     android:minWidth="40dp"
-    android:previewLayout="@layout/bite_macro_widget"
+    android:previewLayout="@layout/bite_water_widget"
     android:resizeMode="horizontal|vertical"
-    android:targetCellHeight="2"
-    android:targetCellWidth="4"
+    android:targetCellHeight="1"
+    android:targetCellWidth="1"
     android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen"
     tools:targetApi="31" />

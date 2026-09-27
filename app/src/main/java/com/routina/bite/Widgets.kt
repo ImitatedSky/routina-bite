@@ -76,6 +76,19 @@ fun widgetToday(context: Context): WidgetToday {
     )
 }
 
+/**
+ * 1×1 上那個數字要用多大的字。
+ *
+ * 固定 20sp 時「1832」這種四位數會超過一格的寬度、被裁成「183…」——1×1 只剩一個數字，
+ * 那個數字再被裁掉就什麼都不剩了。RemoteViews 上的 autoSizeTextType 不是每個版本都吃，
+ * 所以自己依長度分段（負號也算一位，所以吃超標的「-432」走四位數那段）。
+ */
+fun tinyTextSp(text: String): Float = when {
+    text.length <= 3 -> 22f
+    text.length == 4 -> 18f
+    else -> 15f
+}
+
 /** 進度條最多滿格；吃超過由「剩餘」的負數表示 */
 fun widgetPercent(value: Int, target: Int): Int =
     if (target <= 0) 0 else (value * 100 / target).coerceIn(0, 100)

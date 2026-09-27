@@ -55,8 +55,10 @@ API 31 的 `RemoteViews(Map<SizeF, RemoteViews>)` 讓系統自己挑版面，但
 留哪個數字依小工具而定：「今日」留**剩餘熱量**（它回答的問題就是還能吃多少），
 「營養」留**已吃熱量**（它回答的是今天吃進去了什麼）。兩個都不是「隨便挑一個」。
 
-`autoSizeTextType` 在 RemoteViews 上不是每個版本都吃，所以用固定字級 + `maxLines=1`
-+ `ellipsize=end`：真的遇到嚴格 40dp 的宿主，寧可切掉最後一位也不要換行或整個不見。
+`autoSizeTextType` 在 RemoteViews 上不是每個版本都吃，所以字級由 provider 依**位數**決定
+（`tinyTextSp`：3 位以內 22sp、4 位 18sp、再多 15sp）。固定 20sp 時「1832」會超過一格的寬度
+被裁成「183…」，而 1×1 只剩一個數字，那個數字再被裁掉就什麼都不剩了。
+`maxLines=1` + `ellipsize=end` 仍然留著當最後一道防線。
 
 ### D80. `ROW` 不放按鈕
 一格高（約 40dp）扣掉內距只剩 32dp。放一顆按得到的按鈕就等於把數字整個擠掉，
@@ -104,4 +106,4 @@ API 31 的 `RemoteViews(Map<SizeF, RemoteViews>)` 讓系統自己挑版面，但
   targetSdk >= S）沒有這圈內距，40dp 全是我們的。實測 70dp（真實的一格）以上都正常。
 - 三種尺寸在真機桌面上的實際觀感還沒看過（BlueStacks 的 launcher 沒有小工具選單，
   只能用自製的測試宿主，它給的尺寸是我們自己塞進 options 的）。
-  特別是 1×1 的 20sp 在四位數（`1832`）下會不會被 ellipsize，要 Pixel 上確認。
+  1×1 的四位數已改由 `tinyTextSp` 依位數縮字級處理，不再依賴宿主給的寬度剛好夠。

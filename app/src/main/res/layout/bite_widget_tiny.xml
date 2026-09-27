@@ -10,6 +10,7 @@
     android:background="@drawable/bite_widget_background"
     android:padding="0dp">
 
+    <!-- textSize 只是預覽用的值，實際字級由 provider 依位數決定（tinyTextSp） -->
     <TextView
         android:id="@+id/widget_remaining"
         android:layout_width="match_parent"

@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 
@@ -86,7 +87,9 @@ private fun buildWidget(context: Context, options: Bundle?): RemoteViews =
 private fun buildTiny(context: Context): RemoteViews {
     val today = widgetToday(context)
     val views = RemoteViews(context.packageName, R.layout.bite_widget_tiny)
-    views.setTextViewText(R.id.widget_remaining, remaining(today))
+    val text = remaining(today)
+    views.setTextViewText(R.id.widget_remaining, text)
+    views.setTextViewTextSize(R.id.widget_remaining, TypedValue.COMPLEX_UNIT_SP, tinyTextSp(text))
     views.setOnClickPendingIntent(R.id.widget_root, openTodayIntent(context))
     return views
 }

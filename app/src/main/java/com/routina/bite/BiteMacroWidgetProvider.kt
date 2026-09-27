@@ -7,6 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 
@@ -77,7 +78,9 @@ private fun buildMacroWidget(context: Context, options: Bundle?): RemoteViews =
 private fun buildMacroTiny(context: Context): RemoteViews {
     val today = widgetToday(context)
     val views = RemoteViews(context.packageName, R.layout.bite_macro_widget_tiny)
-    views.setTextViewText(R.id.macro_widget_kcal, today.kcal.toString())
+    val text = today.kcal.toString()
+    views.setTextViewText(R.id.macro_widget_kcal, text)
+    views.setTextViewTextSize(R.id.macro_widget_kcal, TypedValue.COMPLEX_UNIT_SP, tinyTextSp(text))
     views.setOnClickPendingIntent(R.id.macro_widget_root, openTodayIntent(context))
     return views
 }

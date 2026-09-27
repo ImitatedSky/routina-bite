@@ -43,5 +43,6 @@
 - [x] 5.7 `DATE_CHANGED` 廣播不崩
 - [x] 5.8 release（R8）版安裝，三個 provider 與五個 layout 都沒被 shrink 掉
 - [x] 5.9 `logcat -b crash` 乾淨、既有資料沒動到
-- [ ] 5.10 真機（Pixel）確認：小工具選單的三個名字、1×1 的四位數會不會被 ellipsize、
-      Android 12 以上新放上去是不是 4×2
+- [x] 5.10 1×1 的數字依位數縮字級（`tinyTextSp`），四位數不會被 ellipsize
+- [ ] 5.11 真機（Pixel）確認：小工具選單的三個名字、Android 12 以上新放上去是不是 4×2、
+      跨午夜的 `DATE_CHANGED`（BlueStacks 發不出 protected broadcast）

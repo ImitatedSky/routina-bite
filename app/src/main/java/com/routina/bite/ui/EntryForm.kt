@@ -512,7 +512,7 @@ fun EntryFormDialog(
 
 // 每份值是 0 就讓欄位留白：空白在這個 App 裡本來就當作 0，印一排 0 反而又要先刪字
 private fun kcalText(perServing: Double, servings: Double): String =
-    if (perServing == 0.0) "" else formatKcal(perServing * servings).toString()
+    if (perServing == 0.0) "" else formatKcalExact(perServing * servings)
 
 private fun gramsText(perServing: Double, servings: Double): String =
     if (perServing == 0.0) "" else formatGrams(perServing * servings)

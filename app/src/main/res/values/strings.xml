@@ -238,7 +238,7 @@
     <string name="shortcut_water_long">喝水 +250 ml</string>
     <string name="shortcut_food_long">記 1 份 %1$s</string>
     <string name="shortcut_water_done">+%1$d ml · 今天 %2$d / %3$d</string>
-    <string name="shortcut_food_done">已記 1 份 %1$s · %2$d 大卡</string>
+    <string name="shortcut_food_done">已記 1 份 %1$s · %2$s 大卡</string>
     <string name="shortcut_food_missing">這個食物已經不在食物庫了</string>
     <string name="shortcut_unknown">這個捷徑不知道要做什麼</string>
     <string name="settings_shortcuts">桌面捷徑</string>

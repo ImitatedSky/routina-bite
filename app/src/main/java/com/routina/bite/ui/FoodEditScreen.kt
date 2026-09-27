@@ -50,7 +50,7 @@ fun FoodEditScreen(
     var servingGrams by remember {
         mutableStateOf(existing?.servingGrams?.let { formatGrams(it) }.orEmpty())
     }
-    var kcal by remember { mutableStateOf(existing?.nutrients?.kcal?.let { formatKcal(it).toString() }.orEmpty()) }
+    var kcal by remember { mutableStateOf(existing?.nutrients?.kcal?.let { formatKcalExact(it) }.orEmpty()) }
     var protein by remember { mutableStateOf(existing.gramsOf { it.protein }) }
     var fat by remember { mutableStateOf(existing.gramsOf { it.fat }) }
     var satFat by remember { mutableStateOf(existing.gramsOf { it.satFat }) }
@@ -71,7 +71,7 @@ fun FoodEditScreen(
         val sum = (protein.toDoubleOrNull() ?: 0.0) * 4 +
             (fat.toDoubleOrNull() ?: 0.0) * 9 +
             (carbs.toDoubleOrNull() ?: 0.0) * 4
-        kcal = if (sum <= 0.0) "" else formatKcal(sum).toString()
+        kcal = if (sum <= 0.0) "" else formatKcalExact(sum)
     }
     var category by remember { mutableStateOf(existing?.category.orEmpty()) }
     var favorite by remember { mutableStateOf(existing?.favorite ?: false) }

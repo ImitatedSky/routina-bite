@@ -435,7 +435,7 @@ private fun EntryRow(entry: DiaryEntry, onEdit: () -> Unit, onDelete: () -> Unit
                 }
             }
             Text(
-                text = formatKcal(entry.total.kcal).toString(),
+                text = formatKcalExact(entry.total.kcal),
                 style = MaterialTheme.typography.bodyLarge
             )
             OverflowMenu(listOf(editLabel to onEdit, deleteLabel to onDelete))

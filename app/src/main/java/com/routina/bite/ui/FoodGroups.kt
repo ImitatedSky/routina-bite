@@ -143,7 +143,7 @@ fun FoodRow(food: Food, onClick: () -> Unit, menu: List<Pair<String, () -> Unit>
 
 @Composable
 fun foodSubtitle(food: Food): String {
-    val kcal = formatKcal(food.nutrients.kcal).toString() + " " + stringResource(R.string.unit_kcal)
+    val kcal = formatKcalExact(food.nutrients.kcal) + " " + stringResource(R.string.unit_kcal)
     val grams = food.servingGrams ?: return kcal
     return kcal + " · " + stringResource(R.string.add_per_serving, formatGrams(grams))
 }

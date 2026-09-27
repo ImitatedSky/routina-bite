@@ -8,10 +8,19 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * 顯示用的格式：熱量取整數，其餘一位小數（D5）。
+ * 顯示用的格式。
+ *
+ * 熱量有兩種寫法：合計用 [formatKcal] 取整數（一整天加起來的小數點是雜訊），
+ * 單筆食物或單筆紀錄用 [formatKcalExact] 照實顯示——營養標示上就有 337.89 這種值，
+ * 四捨五入會在使用者只是打開編輯頁看一眼的時候把它改掉。
  */
 
 fun formatKcal(value: Double): Int = value.roundToInt()
+
+/** 單筆的熱量：整數不帶小數點，有小數就留到兩位（去掉尾端的 0） */
+fun formatKcalExact(value: Double): String =
+    if (abs(value - value.roundToInt()) < 0.005) value.roundToInt().toString()
+    else String.format(Locale.TAIWAN, "%.2f", value).trimEnd('0').trimEnd('.')
 
 fun formatGrams(value: Double): String = String.format(Locale.TAIWAN, "%.1f", value)
 

@@ -8,6 +8,7 @@ import com.routina.bite.data.todayDate
 import com.routina.bite.model.DiaryEntry
 import java.util.UUID
 import kotlin.math.roundToInt
+import com.routina.bite.ui.formatKcalExact
 
 /**
  * 桌面捷徑的收件人：長按 App 圖示（或釘在桌面）選「喝水」「記 1 份 ⋯」時走這裡。
@@ -61,7 +62,7 @@ class ShortcutActivity : Activity() {
                 createdAt = System.currentTimeMillis()
             )
         )
-        toast(getString(R.string.shortcut_food_done, food.name, food.nutrients.kcal.roundToInt()))
+        toast(getString(R.string.shortcut_food_done, food.name, formatKcalExact(food.nutrients.kcal)))
     }
 
     private fun toast(message: String) {

@@ -2,23 +2,18 @@ package com.routina.bite.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -27,7 +22,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -37,6 +31,13 @@ import com.routina.bite.data.allCategories
 import com.routina.bite.model.Food
 import com.routina.bite.model.Nutrients
 
+/**
+ * 食物庫的編輯頁。
+ *
+ * 欄位與紀錄表單共用 [NutrientFields]／[CategoryField]／[FavoriteSwitch]——兩邊填的是同一張
+ * 營養標示，差別只在這裡的數字是「每一份」，紀錄表單的是「這一筆的總量」，
+ * 所以只有提示文字不一樣。這頁不必乘份數，換算熱量就是直接加總。
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FoodEditScreen(
@@ -60,21 +61,22 @@ fun FoodEditScreen(
     var sodium by remember { mutableStateOf(existing.gramsOf { it.sodium }) }
     var cholesterol by remember { mutableStateOf(existing.gramsOf { it.cholesterol }) }
     var note by remember { mutableStateOf(existing?.note.orEmpty()) }
-
-    // 熱量是使用者自己填的（或既有食物本來就有的標示值），別被三大營養素的換算蓋掉。
-    // 與新增紀錄的表單同一條規則，見 add-macro-widget 的 D64/D65。
-    var kcalIsManual by remember { mutableStateOf((existing?.nutrients?.kcal ?: 0.0) > 0.0) }
-
-    // 這裡的欄位就是「每一份」的值，不像紀錄表單還要乘份數，所以直接加總即可
-    fun recalcKcal() {
-        if (kcalIsManual) return
-        val sum = (protein.toDoubleOrNull() ?: 0.0) * 4 +
-            (fat.toDoubleOrNull() ?: 0.0) * 9 +
-            (carbs.toDoubleOrNull() ?: 0.0) * 4
-        kcal = if (sum <= 0.0) "" else formatKcalExact(sum)
-    }
     var category by remember { mutableStateOf(existing?.category.orEmpty()) }
     var favorite by remember { mutableStateOf(existing?.favorite ?: false) }
+
+    // 熱量是使用者自己填的（或既有食物本來就有的標示值），別被三大營養素的換算蓋掉。
+    // 與紀錄表單同一條規則，見 add-macro-widget 的 D64/D65。
+    var kcalIsManual by remember { mutableStateOf((existing?.nutrients?.kcal ?: 0.0) > 0.0) }
+
+    fun recalcKcal() {
+        if (kcalIsManual) return
+        val sum = kcalFromMacros(
+            protein.toDoubleOrNull() ?: 0.0,
+            fat.toDoubleOrNull() ?: 0.0,
+            carbs.toDoubleOrNull() ?: 0.0
+        )
+        kcal = if (sum <= 0.0) "" else formatKcalExact(sum)
+    }
 
     val foods by viewModel.foods.collectAsStateWithLifecycle()
     val categories = allCategories(foods)
@@ -144,7 +146,7 @@ fun FoodEditScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             OutlinedTextField(
                 value = name,
@@ -165,69 +167,39 @@ fun FoodEditScreen(
                 label = stringResource(R.string.field_serving_grams),
                 modifier = Modifier.fillMaxWidth()
             )
-            NumberField(
-                value = kcal,
-                onValueChange = {
+
+            NutrientFields(
+                kcal = NutrientField(kcal) {
                     kcal = it
                     // 清空熱量欄＝交還自動換算，與紀錄表單一致
                     kcalIsManual = it.isNotBlank()
                     if (!kcalIsManual) recalcKcal()
                 },
-                label = stringResource(R.string.field_kcal),
-                isError = showErrors && kcalError,
-                errorText = stringResource(R.string.error_kcal_required),
-                modifier = Modifier.fillMaxWidth()
+                protein = NutrientField(protein) { protein = it; recalcKcal() },
+                fat = NutrientField(fat) { fat = it; recalcKcal() },
+                carbs = NutrientField(carbs) { carbs = it; recalcKcal() },
+                satFat = NutrientField(satFat) { satFat = it },
+                transFat = NutrientField(transFat) { transFat = it },
+                sugar = NutrientField(sugar) { sugar = it },
+                sodium = NutrientField(sodium) { sodium = it },
+                cholesterol = NutrientField(cholesterol) { cholesterol = it },
+                hint = stringResource(R.string.food_blank_hint),
+                kcalError = showErrors && kcalError,
+                kcalErrorText = stringResource(R.string.error_kcal_required)
             )
-            Text(
-                text = stringResource(R.string.food_blank_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            NumberField(protein, { protein = it; recalcKcal() }, stringResource(R.string.field_protein), Modifier.fillMaxWidth())
-            NumberField(fat, { fat = it; recalcKcal() }, stringResource(R.string.field_fat), Modifier.fillMaxWidth())
-            NumberField(satFat, { satFat = it }, stringResource(R.string.field_sat_fat), Modifier.fillMaxWidth())
-            NumberField(transFat, { transFat = it }, stringResource(R.string.field_trans_fat), Modifier.fillMaxWidth())
-            NumberField(carbs, { carbs = it; recalcKcal() }, stringResource(R.string.field_carbs), Modifier.fillMaxWidth())
-            NumberField(sugar, { sugar = it }, stringResource(R.string.field_sugar), Modifier.fillMaxWidth())
-            NumberField(sodium, { sodium = it }, stringResource(R.string.field_sodium), Modifier.fillMaxWidth())
-            NumberField(
-                cholesterol,
-                { cholesterol = it },
-                stringResource(R.string.field_cholesterol),
-                Modifier.fillMaxWidth()
-            )
+
             OutlinedTextField(
                 value = note,
                 onValueChange = { note = it },
                 label = { Text(stringResource(R.string.field_note)) },
                 modifier = Modifier.fillMaxWidth()
             )
-            OutlinedTextField(
+            CategoryField(
                 value = category,
                 onValueChange = { category = it },
-                label = { Text(stringResource(R.string.field_category)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
+                categories = categories
             )
-            // 既有分類直接點，省得自己打字打錯一個字就多出一組
-            if (categories.isNotEmpty()) {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(categories, key = { it }) { name ->
-                        FilterChip(
-                            selected = name == category,
-                            onClick = { category = if (name == category) "" else name },
-                            label = { Text(name) }
-                        )
-                    }
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = stringResource(R.string.field_favorite),
-                    modifier = Modifier.weight(1f)
-                )
-                Switch(checked = favorite, onCheckedChange = { favorite = it })
-            }
+            FavoriteSwitch(checked = favorite, onCheckedChange = { favorite = it })
         }
     }
 

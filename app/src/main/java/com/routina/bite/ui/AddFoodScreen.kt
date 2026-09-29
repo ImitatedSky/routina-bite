@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.routina.bite.R
+import com.routina.bite.data.allCategories
 import com.routina.bite.data.frequentFoods
 import com.routina.bite.data.groupByCategory
 import com.routina.bite.data.recentFoods
@@ -83,6 +84,7 @@ fun AddFoodScreen(
     val query = state.name
     val results = searchFoods(foods, query)
     val groups = remember(foods) { groupByCategory(foods) }
+    val categories = allCategories(foods)
 
     val editLabel = stringResource(R.string.action_edit)
     val quickName = stringResource(R.string.add_quick)
@@ -102,7 +104,16 @@ fun AddFoodScreen(
     fun add() {
         val draft = state.toDraft(quickName) ?: return
         state.commitPhotos(viewModel)
-        viewModel.addEntry(date, draft)
+        // 勾了「同時加進食物庫」：先建食物再把這一筆掛上去，
+        // foodId 接起來之後「常吃」「最近」才認得這一筆，下次點一下就填好
+        val entry = if (state.saveToLibrary) {
+            val food = state.toFood(viewModel.newFoodId(), System.currentTimeMillis())
+            viewModel.saveFood(food)
+            draft.copy(foodId = food.id)
+        } else {
+            draft
+        }
+        viewModel.addEntry(date, entry)
         onDone()
     }
 
@@ -157,7 +168,13 @@ fun AddFoodScreen(
                         selected = state.meal,
                         onSelect = { picked -> picked?.let { state.meal = it } }
                     )
-                    EntryFormFields(state = state, viewModel = viewModel, showMeal = false)
+                    EntryFormFields(
+                        state = state,
+                        viewModel = viewModel,
+                        showMeal = false,
+                        showSaveToLibrary = true,
+                        categories = categories
+                    )
                 }
             }
 

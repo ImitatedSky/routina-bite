@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,7 +46,6 @@ import kotlinx.coroutines.launch
 
 /**
  * 表單正在編輯的一筆紀錄。[basis] 是「每一份」的營養值，表單上顯示的是 basis × [servings]。
- * [servingGrams] 是唯讀的換算基準，表單不改它（要改每份幾公克請去食物編輯頁）。
  */
 data class EntryDraft(
     val name: String = "",
@@ -61,12 +61,18 @@ data class EntryDraft(
 /** 空白表單 */
 fun draftOf(meal: Meal?) = EntryDraft(meal = meal)
 
-/** 從食物庫點一個食物：用它的數值把表單填好 */
+/**
+ * 從食物庫點一個食物：用它的數值把表單填好。
+ *
+ * 備註也一起帶過來——食物庫裡的備註寫的就是「這東西是什麼」（麵包種類、醬料、份量說明），
+ * 記下來的那一筆沒有理由把它丟掉，要改再改就好。
+ */
 fun draftOf(food: Food, meal: Meal?) = EntryDraft(
     name = food.name,
     servingGrams = food.servingGrams,
     basis = food.nutrients,
     meal = meal,
+    note = food.note,
     foodId = food.id
 )
 
@@ -92,7 +98,7 @@ private val PHOTO_SIZE = 64.dp
  * 表單的狀態。新增紀錄頁的內嵌表單與編輯紀錄的對話框共用這一份，
  * 差別只在誰來畫、按鈕放哪裡。
  *
- * 連動規則：改份數或公克 → 四個營養欄以 basis × 份數 重算；
+ * 連動規則：改份數或公克 → 九個營養欄以 basis × 份數 重算；
  * 直接改某個營養欄 → basis 的那一項改成 輸入值 ÷ 份數。最後動的那個就是使用者要的值。
  */
 @Stable
@@ -107,6 +113,11 @@ class EntryFormState(initial: EntryDraft) {
         private set
     var grams by mutableStateOf("")
         private set
+
+    /** 每份幾公克。只有「同時加進食物庫」打開時才給改，那時才有東西要記這個基準 */
+    var servingGramsText by mutableStateOf("")
+        private set
+
     var kcal by mutableStateOf("")
         private set
 
@@ -118,9 +129,25 @@ class EntryFormState(initial: EntryDraft) {
         private set
     var carbs by mutableStateOf("")
         private set
+    var satFat by mutableStateOf("")
+        private set
+    var transFat by mutableStateOf("")
+        private set
+    var sugar by mutableStateOf("")
+        private set
+    var sodium by mutableStateOf("")
+        private set
+    var cholesterol by mutableStateOf("")
+        private set
+
     var meal by mutableStateOf(initial.meal)
     var note by mutableStateOf("")
     var photo by mutableStateOf("")
+
+    /** 打開就順手把這一筆存成食物庫的一筆，下次點一下就填好 */
+    var saveToLibrary by mutableStateOf(false)
+    var category by mutableStateOf("")
+    var favorite by mutableStateOf(false)
 
     /** 每一份的營養值；欄位顯示的是 basis × 份數 */
     private var basis by mutableStateOf(initial.basis)
@@ -141,6 +168,9 @@ class EntryFormState(initial: EntryDraft) {
     /** 本來就未分餐的紀錄才給「未分餐」這個選項；新增一律要選一餐 */
     val allowNoMeal: Boolean get() = source.meal == null
 
+    /** 這一筆還不是食物庫裡的東西，才有「加進食物庫」可言 */
+    val canSaveToLibrary: Boolean get() = source.foodId == null
+
     val amount: Double?
         get() = when (edited) {
             AmountEdit.NONE -> source.servings
@@ -149,7 +179,9 @@ class EntryFormState(initial: EntryDraft) {
             AmountEdit.GRAMS -> servingGrams?.let { grams.toDoubleOrNull()?.div(it) }
         }
 
-    val valid: Boolean get() = (amount ?: 0.0) > 0.0
+    /** 存進食物庫就得有名字——庫裡多一筆叫「快速輸入」的東西沒有任何用處 */
+    val valid: Boolean
+        get() = (amount ?: 0.0) > 0.0 && !(saveToLibrary && name.isBlank())
 
     fun updateServings(input: String) {
         servings = input
@@ -169,6 +201,22 @@ class EntryFormState(initial: EntryDraft) {
         val value = input.toDoubleOrNull()?.div(perServing)
         servings = if (value == null) "" else formatAmount(value)
         fillNutrients(value)
+    }
+
+    /**
+     * 每份幾公克。改它不動份數，只讓公克欄跟著重算——
+     * 使用者說的是「一份是 100 克」，不是「我吃的份數變了」。
+     */
+    fun updateServingGrams(input: String) {
+        // 先把現在的份數定下來：source 一改，用公克回推的 amount 就跟著變了
+        val value = amount
+        servingGramsText = input
+        source = source.copy(servingGrams = input.toDoubleOrNull()?.takeIf { it > 0.0 })
+        edited = AmountEdit.SERVINGS
+        if (value != null) {
+            servings = formatAmount(value)
+            grams = servingGrams?.let { formatGrams(value * it) }.orEmpty()
+        }
     }
 
     /**
@@ -200,14 +248,39 @@ class EntryFormState(initial: EntryDraft) {
         recalcKcalFromMacros()
     }
 
+    // 以下五項不參與熱量換算（標示上的飽和／反式脂肪已經含在脂肪裡，糖含在碳水裡）
+    fun updateSatFat(input: String) {
+        satFat = input
+        setBasis(input) { basis.copy(satFat = it) }
+    }
+
+    fun updateTransFat(input: String) {
+        transFat = input
+        setBasis(input) { basis.copy(transFat = it) }
+    }
+
+    fun updateSugar(input: String) {
+        sugar = input
+        setBasis(input) { basis.copy(sugar = it) }
+    }
+
+    fun updateSodium(input: String) {
+        sodium = input
+        setBasis(input) { basis.copy(sodium = it) }
+    }
+
+    fun updateCholesterol(input: String) {
+        cholesterol = input
+        setBasis(input) { basis.copy(cholesterol = it) }
+    }
+
     /**
-     * 三大營養素換算熱量：蛋白質與碳水 4 kcal/g、脂肪 9 kcal/g。
-     * 只在使用者沒有自己填熱量時才算——食物庫帶進來的熱量是標示值，
+     * 三大營養素換算熱量。只在使用者沒有自己填熱量時才算——食物庫帶進來的熱量是標示值，
      * 標示值本來就不會等於這個換算（[DayCompositionCard] 的註解講過同一件事），不該被蓋掉。
      */
     private fun recalcKcalFromMacros() {
         if (kcalIsManual) return
-        val perServing = basis.protein * 4 + basis.fat * 9 + basis.carbs * 4
+        val perServing = kcalFromMacros(basis.protein, basis.fat, basis.carbs)
         basis = basis.copy(kcal = perServing)
         val value = amount ?: return
         kcal = kcalText(perServing, value)
@@ -227,11 +300,17 @@ class EntryFormState(initial: EntryDraft) {
         name = draft.name
         servings = formatAmount(draft.servings)
         val perServing = draft.servingGrams?.takeIf { it > 0.0 }
+        servingGramsText = perServing?.let { formatGrams(it) }.orEmpty()
         grams = perServing?.let { formatGrams(draft.servings * it) }.orEmpty()
         kcal = kcalText(draft.basis.kcal, draft.servings)
         protein = gramsText(draft.basis.protein, draft.servings)
         fat = gramsText(draft.basis.fat, draft.servings)
         carbs = gramsText(draft.basis.carbs, draft.servings)
+        satFat = gramsText(draft.basis.satFat, draft.servings)
+        transFat = gramsText(draft.basis.transFat, draft.servings)
+        sugar = gramsText(draft.basis.sugar, draft.servings)
+        sodium = gramsText(draft.basis.sodium, draft.servings)
+        cholesterol = gramsText(draft.basis.cholesterol, draft.servings)
         meal = draft.meal
         note = draft.note
         photo = draft.photo
@@ -239,6 +318,10 @@ class EntryFormState(initial: EntryDraft) {
         edited = AmountEdit.NONE
         // 食物庫帶進來的熱量是標示值，算是「已經指定」；空白表單才交給自動換算
         kcalIsManual = draft.basis.kcal > 0.0
+        // 換了一筆就重問一次要不要進食物庫（點到的食物本來就在庫裡）
+        saveToLibrary = false
+        category = ""
+        favorite = false
     }
 
     /** 清空：回到空白表單，只留目前選的餐別 */
@@ -257,13 +340,35 @@ class EntryFormState(initial: EntryDraft) {
         )
     }
 
-    /** 份數或公克改了：四個營養欄以 basis × 份數 重算 */
+    /**
+     * 表單內容做成食物庫的一筆。
+     *
+     * 存的是 [basis]（每一份）而不是欄位上顯示的總量——食物庫記的本來就是「一份有多少」，
+     * 這也是為什麼記了 2 份之後存進庫裡，下次點它會正確地帶出一份的量。
+     */
+    fun toFood(id: String, createdAt: Long) = Food(
+        id = id,
+        name = name.trim(),
+        servingGrams = servingGrams,
+        nutrients = basis,
+        note = note.trim(),
+        category = category.trim(),
+        favorite = favorite,
+        createdAt = createdAt
+    )
+
+    /** 份數或公克改了：九個營養欄以 basis × 份數 重算 */
     private fun fillNutrients(value: Double?) {
         if (value == null) return
         kcal = kcalText(basis.kcal, value)
         protein = gramsText(basis.protein, value)
         fat = gramsText(basis.fat, value)
         carbs = gramsText(basis.carbs, value)
+        satFat = gramsText(basis.satFat, value)
+        transFat = gramsText(basis.transFat, value)
+        sugar = gramsText(basis.sugar, value)
+        sodium = gramsText(basis.sodium, value)
+        cholesterol = gramsText(basis.cholesterol, value)
     }
 
     // 直接改營養欄：把每份值改成 輸入值 ÷ 份數。份數還不合法就只改文字，等份數修好再算
@@ -297,7 +402,11 @@ fun EntryFormState.dropNewPhotos(viewModel: BiteViewModel) {
 /**
  * 表單的欄位本體。編輯對話框與新增紀錄頁畫的是同一份。
  *
+ * 營養欄與分類、常用都用 [NutrientFields]／[CategoryField]／[FavoriteSwitch]，
+ * 和食物編輯頁是同一份元件——兩邊填的就是同一張營養標示。
+ *
  * [showMeal] 在新增紀錄頁是 false：那裡的餐別晶片在頁面最上面，不由表單畫。
+ * [showSaveToLibrary] 只有新增紀錄頁給 true：改一筆舊紀錄不該順便產生新食物。
  *
  * 照片要 [viewModel]：選到圖就得當場複製進 App 目錄（URI 的授權只在回呼那一趟有效）。
  */
@@ -307,7 +416,9 @@ fun EntryFormFields(
     state: EntryFormState,
     viewModel: BiteViewModel,
     modifier: Modifier = Modifier,
-    showMeal: Boolean = true
+    showMeal: Boolean = true,
+    showSaveToLibrary: Boolean = false,
+    categories: List<String> = emptyList()
 ) {
     val quickName = stringResource(R.string.add_quick)
     var viewingPhoto by remember { mutableStateOf(false) }
@@ -360,42 +471,18 @@ fun EntryFormFields(
             }
         }
 
-        // 四個營養欄排成兩欄，表單才不會長到備註要捲兩次才看得到
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NumberField(
-                    value = state.kcal,
-                    onValueChange = { state.updateKcal(it) },
-                    label = stringResource(R.string.entry_field_kcal),
-                    modifier = Modifier.weight(1f)
-                )
-                NumberField(
-                    value = state.protein,
-                    onValueChange = { state.updateProtein(it) },
-                    label = stringResource(R.string.entry_field_protein),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NumberField(
-                    value = state.fat,
-                    onValueChange = { state.updateFat(it) },
-                    label = stringResource(R.string.entry_field_fat),
-                    modifier = Modifier.weight(1f)
-                )
-                NumberField(
-                    value = state.carbs,
-                    onValueChange = { state.updateCarbs(it) },
-                    label = stringResource(R.string.entry_field_carbs),
-                    modifier = Modifier.weight(1f)
-                )
-            }
-            Text(
-                text = stringResource(R.string.entry_form_hint),
-                style = MaterialTheme.typography.bodySmall.zh(),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        NutrientFields(
+            kcal = NutrientField(state.kcal) { state.updateKcal(it) },
+            protein = NutrientField(state.protein) { state.updateProtein(it) },
+            fat = NutrientField(state.fat) { state.updateFat(it) },
+            carbs = NutrientField(state.carbs) { state.updateCarbs(it) },
+            satFat = NutrientField(state.satFat) { state.updateSatFat(it) },
+            transFat = NutrientField(state.transFat) { state.updateTransFat(it) },
+            sugar = NutrientField(state.sugar) { state.updateSugar(it) },
+            sodium = NutrientField(state.sodium) { state.updateSodium(it) },
+            cholesterol = NutrientField(state.cholesterol) { state.updateCholesterol(it) },
+            hint = stringResource(R.string.entry_form_hint)
+        )
 
         if (showMeal) {
             MealPicker(
@@ -456,6 +543,43 @@ fun EntryFormFields(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
+
+        if (showSaveToLibrary && state.canSaveToLibrary) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = state.saveToLibrary,
+                        onCheckedChange = { state.saveToLibrary = it }
+                    )
+                    Column(modifier = Modifier.padding(start = 4.dp)) {
+                        Text(stringResource(R.string.add_save_to_library))
+                        Text(
+                            text = stringResource(R.string.add_save_to_library_hint),
+                            style = MaterialTheme.typography.bodySmall.zh(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                // 每份公克、分類、常用只有食物庫用得到，沒要存就不要擺在那裡佔位子
+                if (state.saveToLibrary) {
+                    NumberField(
+                        value = state.servingGramsText,
+                        onValueChange = { state.updateServingGrams(it) },
+                        label = stringResource(R.string.field_serving_grams),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    CategoryField(
+                        value = state.category,
+                        onValueChange = { state.category = it },
+                        categories = categories
+                    )
+                    FavoriteSwitch(
+                        checked = state.favorite,
+                        onCheckedChange = { state.favorite = it }
+                    )
+                }
+            }
+        }
     }
 
     if (viewingPhoto) {

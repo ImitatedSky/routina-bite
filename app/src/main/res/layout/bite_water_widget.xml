@@ -1,38 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  喝水：整塊就是一顆按鈕（點一下就記 250 ml），所以底色用按鈕的填色與外框，
-  和另外兩個「點了會開 App」的小工具在外觀上分得開。
-  只有一個版面，字級由程式依尺寸調整。
+  喝水 1×1：一個水的圓環，中間是「+250」，下面一行小字是今天喝了多少。
+  整塊就是一顆按鈕（點了直接記一杯），底色用水的淡色，和另外兩塊分得開。
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/water_widget_root"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bite_water_widget_background"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="1dp">
+    android:padding="6dp">
 
-    <TextView
-        android:id="@+id/water_widget_add"
+    <ImageView
+        android:id="@+id/water_widget_ring"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:gravity="center"
-        android:includeFontPadding="false"
-        android:maxLines="1"
-        android:text="@string/water_widget_add"
-        android:textColor="@color/widget_water"
-        android:textSize="20sp" />
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter" />
 
-    <TextView
-        android:id="@+id/water_widget_total"
-        android:layout_width="match_parent"
+    <LinearLayout
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:gravity="center"
-        android:includeFontPadding="false"
-        android:maxLines="1"
-        android:textColor="@color/widget_text_dim"
-        android:textSize="10sp" />
-</LinearLayout>
+        android:layout_gravity="center"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/water_widget_add"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="@string/water_widget_add"
+            android:textColor="@color/widget_water"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/water_widget_total"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_text_dim"
+            android:textSize="9sp" />
+    </LinearLayout>
+</FrameLayout>

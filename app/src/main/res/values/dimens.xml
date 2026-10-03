@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      小工具的圓角。Android 12 以上改用系統給的值（values-v31），和桌面上其他小工具一致；
+      舊版本用一個偏大的圓角，圓一點比較柔和。內層元件的圓角比外框小 8dp，兩層的弧線才平行。
+    -->
+    <dimen name="widget_radius">24dp</dimen>
+    <dimen name="widget_inner_radius">16dp</dimen>
+</resources>

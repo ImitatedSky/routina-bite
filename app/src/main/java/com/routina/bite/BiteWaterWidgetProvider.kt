@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.TypedValue
+import android.view.View
 import android.widget.RemoteViews
 
 /**
@@ -65,36 +66,53 @@ fun updateWaterWidgets(context: Context) {
 }
 
 /**
- * 只有一個版面：內容本來就只有一個動作與一行累計，變大時放大字級就好，
- * 不必為此多養兩個 layout。
+ * 1×1 是一個水的圓環、中間「+250」；放大之後換成橫的版面，把「+250 ml」放大、
+ * 再講還差多少。內容始終是同一個動作加一行進度，不分三種版面。
  */
 private fun buildWaterWidget(context: Context, options: Bundle?): RemoteViews {
     val today = widgetToday(context)
-    val size = widgetSizeOf(options)
-    val views = RemoteViews(context.packageName, R.layout.bite_water_widget)
+    val ring = ringBitmap(
+        context,
+        widgetFraction(today.water, today.targets.water),
+        context.getColor(R.color.widget_ring_water)
+    )
 
-    // 兩行字要一起放進宿主給的高度，所以字級跟著尺寸走
-    val addSp = when (size) {
-        WidgetSize.TINY -> 20f
-        WidgetSize.ROW -> 24f
-        WidgetSize.FULL -> 30f
-    }
-    views.setTextViewTextSize(R.id.water_widget_add, TypedValue.COMPLEX_UNIT_SP, addSp)
-    views.setTextViewTextSize(
-        R.id.water_widget_total,
-        TypedValue.COMPLEX_UNIT_SP,
-        if (size == WidgetSize.TINY) 10f else 12f
-    )
-    // 1×1 放不下單位，大一點才補上 ml
-    views.setTextViewText(
-        R.id.water_widget_total,
-        if (size == WidgetSize.TINY) {
-            context.getString(R.string.water_widget_total, today.water, today.targets.water)
-        } else {
-            context.getString(R.string.widget_water_amount, today.water, today.targets.water)
+    val views = if (widgetSizeOf(options) == WidgetSize.TINY) {
+        val ringDp = tinyRingDp(options)
+        RemoteViews(context.packageName, R.layout.bite_water_widget).apply {
+            setTextViewTextSize(
+                R.id.water_widget_add,
+                TypedValue.COMPLEX_UNIT_SP,
+                ringCenterTextSp(context.getString(R.string.water_widget_add), ringDp)
+            )
+            setTextViewText(
+                R.id.water_widget_total,
+                context.getString(R.string.water_widget_tiny_total, today.water)
+            )
+            setViewVisibility(
+                R.id.water_widget_total,
+                if (ringHasRoomForLabel(ringDp)) View.VISIBLE else View.GONE
+            )
         }
-    )
-    views.setOnClickPendingIntent(R.id.water_widget_root, addWaterIntent(context))
+    } else {
+        val left = today.targets.water - today.water
+        // 2×1 只放得下「500 / 2000 ml」，夠寬才把還差多少講出來
+        val wide = widgetWidthDp(options) >= WIDGET_WIDE_DP
+        RemoteViews(context.packageName, R.layout.bite_water_widget_wide).apply {
+            setTextViewText(
+                R.id.water_widget_total,
+                if (!wide) {
+                    context.getString(R.string.water_widget_total, today.water, today.targets.water)
+                } else if (left <= 0) {
+                    context.getString(R.string.water_widget_done, today.water, today.targets.water)
+                } else {
+                    context.getString(R.string.water_widget_left, today.water, today.targets.water, left)
+                }
+            )
+        }
+    }
+    views.setImageViewBitmap(R.id.water_widget_ring, ring)
+    views.setOnClickPendingIntent(android.R.id.background, addWaterIntent(context))
     return views
 }
 

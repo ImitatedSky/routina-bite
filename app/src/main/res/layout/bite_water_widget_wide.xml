@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  喝水 放大之後：左邊圓環（中間一滴水），右邊大大的「+250 ml」和今天的進度。
+  內容還是同一件事，只是有地方把字放大、把「還差多少」講出來。
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@android:id/background"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bite_water_widget_background"
+    android:gravity="center"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingTop="2dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="2dp">
+
+    <FrameLayout
+        android:layout_width="36dp"
+        android:layout_height="36dp">
+
+        <ImageView
+            android:id="@+id/water_widget_ring"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter" />
+
+        <ImageView
+            android:layout_width="17dp"
+            android:layout_height="17dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_widget_drop" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="@string/water_widget_add_ml"
+            android:textColor="@color/widget_water"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/water_widget_total"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_text_dim"
+            android:textSize="11sp" />
+    </LinearLayout>
+</LinearLayout>

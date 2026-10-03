@@ -4,11 +4,10 @@
     <color name="widget_background">#23211D</color>
     <color name="widget_text">#EFE8D9</color>
     <color name="widget_text_dim">#A79F90</color>
-    <color name="widget_track">#3A362F</color>
-    <color name="widget_kcal">#8F99DE</color>
-    <color name="widget_water">#74A9C4</color>
-    <color name="widget_button_fill">#2E2B25</color>
-    <color name="widget_button_stroke">#4A453C</color>
+    <color name="widget_kcal">#F09A86</color>
+    <color name="widget_water">#8CC0DB</color>
+    <color name="widget_kcal_container">#3A2924</color>
+    <color name="widget_water_container">#1F2D35</color>
 
     <!-- 深色底上要提亮一階，原值在深色背景上對比不夠 -->
     <color name="widget_macro_protein">#79B9A7</color>

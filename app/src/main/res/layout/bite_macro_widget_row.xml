@@ -1,86 +1,108 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  矮而寬：一行熱量加三個營養素的數字，沒有進度條——一格高只放得下一行字，
-  進度條會讓字被裁掉。三個數字各用自己的顏色，掃一眼就認得出誰是誰。
-  三個營養素那組由程式依寬度決定顯不顯示（4×1 才擠得下，2×1 會被裁到看不懂）。
+  營養 矮而寬：小組成環＋已吃熱量，夠寬（4 格）再排出三個營養素的公克數，各帶一個色點。
+  2×1 只留熱量：實測 150dp 硬塞三個營養素會被裁到認不出是哪一個。
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/macro_widget_root"
+    android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bite_widget_background"
     android:baselineAligned="false"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingLeft="8dp"
-    android:paddingTop="2dp"
-    android:paddingRight="8dp"
-    android:paddingBottom="2dp">
+    android:paddingStart="10dp"
+    android:paddingTop="4dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="4dp">
 
-    <TextView
-        android:id="@+id/macro_widget_kcal"
+    <ImageView
+        android:id="@+id/macro_widget_ring"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter" />
+
+    <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:ellipsize="end"
-        android:includeFontPadding="false"
-        android:maxLines="1"
-        android:textColor="@color/widget_text"
-        android:textSize="14sp" />
+        android:layout_marginStart="10dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="@string/macro_widget_eaten"
+            android:textColor="@color/widget_text_dim"
+            android:textSize="11sp" />
+
+        <TextView
+            android:id="@+id/macro_widget_kcal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_text"
+            android:textSize="20sp" />
+    </LinearLayout>
 
     <LinearLayout
         android:id="@+id/macro_widget_macros"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
+        android:layout_marginStart="12dp"
         android:layout_weight="1"
         android:gravity="end|center_vertical"
         android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="7dp"
+            android:layout_height="7dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/bite_widget_dot_protein" />
 
         <TextView
             android:id="@+id/macro_widget_protein"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:includeFontPadding="false"
+            android:layout_marginStart="3dp"
             android:maxLines="1"
-            android:textColor="@color/widget_macro_protein"
-            android:textSize="11sp" />
+            android:textColor="@color/widget_text"
+            android:textSize="12sp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="4dp"
-            android:layout_marginRight="4dp"
-            android:includeFontPadding="false"
-            android:text="@string/widget_separator"
-            android:textColor="@color/widget_text_dim"
-            android:textSize="11sp" />
+        <ImageView
+            android:layout_width="7dp"
+            android:layout_height="7dp"
+            android:layout_marginStart="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/bite_widget_dot_fat" />
 
         <TextView
             android:id="@+id/macro_widget_fat"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:includeFontPadding="false"
+            android:layout_marginStart="3dp"
             android:maxLines="1"
-            android:textColor="@color/widget_macro_fat"
-            android:textSize="11sp" />
+            android:textColor="@color/widget_text"
+            android:textSize="12sp" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="4dp"
-            android:layout_marginRight="4dp"
-            android:includeFontPadding="false"
-            android:text="@string/widget_separator"
-            android:textColor="@color/widget_text_dim"
-            android:textSize="11sp" />
+        <ImageView
+            android:layout_width="7dp"
+            android:layout_height="7dp"
+            android:layout_marginStart="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/bite_widget_dot_carbs" />
 
         <TextView
             android:id="@+id/macro_widget_carbs"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:includeFontPadding="false"
+            android:layout_marginStart="3dp"
             android:maxLines="1"
-            android:textColor="@color/widget_macro_carbs"
-            android:textSize="11sp" />
+            android:textColor="@color/widget_text"
+            android:textSize="12sp" />
     </LinearLayout>
 </LinearLayout>

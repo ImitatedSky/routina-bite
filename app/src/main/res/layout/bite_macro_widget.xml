@@ -1,126 +1,161 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  今日營養：熱量吃了多少，加上蛋白質／脂肪／碳水各吃了幾公克。
-  上面一行熱量＋進度條，下面三欄並排，總高度和另一個小工具一樣壓在桌面 2 格（110dp）以內。
-  三欄用等寬而不是靠文字長度分配，數字才會對齊、每天看的位置都一樣。
+  營養 4×2：左邊一個大的組成環（三大營養素換算成熱量的佔比），中間是已吃熱量；
+  右邊三列，每列一個色點、名稱、公克數。色點和環上是同一組顏色，掃一眼就對得起來。
+  環 68dp＋內距 20＝88dp，在舊桌面多加的那圈內距之後（兩格只剩 94dp）也放得下。
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/macro_widget_root"
+    android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bite_widget_background"
-    android:orientation="vertical"
+    android:baselineAligned="false"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
     android:padding="10dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:gravity="center_vertical"
-        android:orientation="vertical">
+    <FrameLayout
+        android:layout_width="68dp"
+        android:layout_height="68dp">
 
-        <TextView
-            android:id="@+id/macro_widget_kcal"
+        <ImageView
+            android:id="@+id/macro_widget_ring"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:maxLines="1"
-            android:textColor="@color/widget_text"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <ProgressBar
-            android:id="@+id/macro_widget_kcal_bar"
-            style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="match_parent"
-            android:layout_height="8dp"
-            android:layout_marginTop="4dp"
-            android:max="100"
-            android:progressDrawable="@drawable/bite_widget_progress_kcal" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:baselineAligned="false"
-        android:orientation="horizontal">
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter" />
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
+            android:layout_gravity="center"
+            android:gravity="center_horizontal"
             android:orientation="vertical">
 
             <TextView
-                android:layout_width="match_parent"
+                android:id="@+id/macro_widget_kcal"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/widget_text"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/macro_widget_target"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/widget_text_dim"
+                android:textSize="9sp" />
+        </LinearLayout>
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/bite_widget_dot_protein" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
                 android:maxLines="1"
                 android:text="@string/macro_protein"
                 android:textColor="@color/widget_text_dim"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
 
             <TextView
                 android:id="@+id/macro_widget_protein"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
                 android:maxLines="1"
                 android:textColor="@color/widget_macro_protein"
-                android:textSize="16sp" />
+                android:textSize="15sp" />
         </LinearLayout>
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/bite_widget_dot_fat" />
 
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
                 android:maxLines="1"
                 android:text="@string/macro_fat"
                 android:textColor="@color/widget_text_dim"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
 
             <TextView
                 android:id="@+id/macro_widget_fat"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
                 android:maxLines="1"
                 android:textColor="@color/widget_macro_fat"
-                android:textSize="16sp" />
+                android:textSize="15sp" />
         </LinearLayout>
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/bite_widget_dot_carbs" />
 
             <TextView
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
                 android:maxLines="1"
                 android:text="@string/macro_carbs"
                 android:textColor="@color/widget_text_dim"
-                android:textSize="12sp" />
+                android:textSize="13sp" />
 
             <TextView
                 android:id="@+id/macro_widget_carbs"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
                 android:maxLines="1"
                 android:textColor="@color/widget_macro_carbs"
-                android:textSize="16sp" />
+                android:textSize="15sp" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

@@ -253,13 +253,19 @@
     <!-- 桌面小工具 -->
     <string name="widget_description">今天還剩多少大卡、喝了多少水；一按就記一杯水或開新增紀錄</string>
     <string name="widget_remaining">剩餘</string>
+    <string name="widget_left_to_eat">還能吃</string>
+    <string name="widget_over">超過了</string>
+    <string name="widget_water_label">喝水</string>
+    <string name="widget_water_done">喝夠了！</string>
     <string name="widget_water_amount">%1$d / %2$d ml</string>
-    <string name="widget_add_water">+250 水</string>
+    <string name="widget_add_water">+250</string>
     <string name="widget_log_meal">記一餐</string>
 
     <!-- 今日營養小工具 -->
     <string name="macro_widget_description">今天吃了多少熱量，以及蛋白質、脂肪、碳水各幾公克</string>
-    <string name="macro_widget_kcal">%1$d / %2$d 大卡</string>
+    <string name="macro_widget_eaten">已吃</string>
+    <string name="widget_kcal_unit">大卡</string>
+    <string name="macro_widget_target">/ %1$d</string>
     <string name="macro_widget_grams">%1$.1f g</string>
 
     <!-- 小工具選單裡三個要分得出來，都叫 Routina Bite 的話使用者選不到想要的那個 -->
@@ -268,14 +274,14 @@
     <string name="widget_label_water">喝水</string>
 
     <!-- 小工具縮到一格高時的窄版文字 -->
-    <string name="widget_separator">·</string>
-    <string name="macro_widget_row_kcal">%1$d 大卡</string>
-    <string name="macro_widget_row_protein">蛋白 %1$.0f</string>
-    <string name="macro_widget_row_fat">脂肪 %1$.0f</string>
-    <string name="macro_widget_row_carbs">碳水 %1$.0f</string>
+    <string name="macro_widget_row_grams">%1$.0f</string>
 
     <!-- 喝水小工具 -->
     <string name="water_widget_description">點一下就記 250 ml 水，不開畫面；下面一行是今天的累計</string>
     <string name="water_widget_add">+250</string>
-    <string name="water_widget_total">%1$d / %2$d</string>
+    <string name="water_widget_add_ml">+250 ml</string>
+    <string name="water_widget_tiny_total">%1$d ml</string>
+    <string name="water_widget_total">%1$d / %2$d ml</string>
+    <string name="water_widget_left">今天 %1$d / %2$d · 還差 %3$d</string>
+    <string name="water_widget_done">今天 %1$d / %2$d · 喝夠了！</string>
 </resources>

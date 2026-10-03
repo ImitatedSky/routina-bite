@@ -1,25 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  1×1（約 40dp 見方）：只放剩餘熱量的數字。
-  標籤、進度條、按鈕在這個尺寸下不是「擠」而是「放不下」，硬塞的結果是全部都看不清楚。
+  今日 1×1：一個熱量圓環，中間是還能吃多少。
+  環畫成 Bitmap（WidgetRings.kt）以 fitCenter 撐滿格子，數字的字級由 provider 依環的大小決定。
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_root"
+    android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bite_widget_background"
-    android:padding="0dp">
+    android:padding="6dp">
 
-    <!-- textSize 只是預覽用的值，實際字級由 provider 依位數決定（tinyTextSp） -->
-    <TextView
-        android:id="@+id/widget_remaining"
+    <ImageView
+        android:id="@+id/widget_ring"
         android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:ellipsize="end"
-        android:gravity="center"
-        android:includeFontPadding="false"
-        android:maxLines="1"
-        android:textColor="@color/widget_text"
-        android:textSize="20sp" />
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/widget_remaining"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_text"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/widget_remaining_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="@string/widget_remaining"
+            android:textColor="@color/widget_text_dim"
+            android:textSize="9sp" />
+    </LinearLayout>
 </FrameLayout>

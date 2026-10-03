@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  兩欄並排（左熱量、右喝水）＋一列按鈕，總高度壓在桌面 2 格（約 110dp）以內。
-  每欄只放「一行字 + 一條進度條」是刻意的：要回答的是「還能吃多少」與「水喝了多少」，
-  明細開 App 就看得到，硬塞進來只會讓小工具一變矮就被裁掉。
+  今日 4×2：上排兩個圓環（熱量、喝水）各配一個大數字，下排兩顆膠囊按鈕。
+  高度預算 94dp：內距 16 + 圓環 40 + 間距 6 + 按鈕 32。兩格是 110dp，但 Android 11 以下
+  的桌面會自己再加一圈 8dp 內距，實際只剩 94；照 110 排的話上排的數字會被切掉一半。
+  上排吸收多出來的高度、按鈕列固定高：空間不夠時寧可上排擠一點，按鈕一定要按得到。
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/widget_root"
+    android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bite_widget_background"
     android:orientation="vertical"
-    android:padding="10dp">
+    android:padding="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -18,111 +19,165 @@
         android:layout_weight="1"
         android:baselineAligned="false"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:paddingStart="2dp"
+        android:paddingEnd="2dp">
 
-        <!-- 左欄：剩餘熱量是這個小工具最常被瞄一眼的數字，所以字級最大 -->
+        <!-- 熱量：環中間一團火，右邊是還能吃多少 -->
+        <FrameLayout
+            android:layout_width="40dp"
+            android:layout_height="40dp">
+
+            <ImageView
+                android:id="@+id/widget_ring"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter" />
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_widget_flame" />
+        </FrameLayout>
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="12dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <!-- 兩欄的首行固定同高，下面的進度條才會對齊在同一條線上 -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="28dp"
-                android:baselineAligned="true"
-                android:gravity="bottom"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="6dp"
-                    android:text="@string/widget_remaining"
-                    android:textColor="@color/widget_text_dim"
-                    android:textSize="13sp" />
-
-                <TextView
-                    android:id="@+id/widget_remaining"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:textColor="@color/widget_text"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <ProgressBar
-                android:id="@+id/widget_kcal_bar"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="8dp"
-                android:layout_marginTop="4dp"
-                android:max="100"
-                android:progressDrawable="@drawable/bite_widget_progress_kcal" />
-        </LinearLayout>
-
-        <!-- 右欄：喝水 -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="8dp"
             android:layout_weight="1"
             android:orientation="vertical">
 
             <TextView
-                android:id="@+id/widget_water_amount"
-                android:layout_width="match_parent"
-                android:layout_height="28dp"
-                android:gravity="bottom"
-                android:ellipsize="end"
+                android:id="@+id/widget_remaining_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:includeFontPadding="false"
                 android:maxLines="1"
+                android:text="@string/widget_left_to_eat"
                 android:textColor="@color/widget_text_dim"
-                android:textSize="15sp" />
+                android:textSize="11sp" />
 
-            <ProgressBar
-                android:id="@+id/widget_water_bar"
-                style="?android:attr/progressBarStyleHorizontal"
+            <TextView
+                android:id="@+id/widget_remaining"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:fontFamily="sans-serif-medium"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/widget_text"
+                android:textSize="20sp" />
+        </LinearLayout>
+
+        <!-- 喝水：環中間一滴水 -->
+        <FrameLayout
+            android:layout_width="40dp"
+            android:layout_height="40dp">
+
+            <ImageView
+                android:id="@+id/widget_water_ring"
                 android:layout_width="match_parent"
-                android:layout_height="8dp"
-                android:layout_marginTop="4dp"
-                android:max="100"
-                android:progressDrawable="@drawable/bite_widget_progress_water" />
+                android:layout_height="match_parent"
+                android:importantForAccessibility="no"
+                android:scaleType="fitCenter" />
+
+            <ImageView
+                android:layout_width="17dp"
+                android:layout_height="17dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_widget_drop" />
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_water_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="@string/widget_water_label"
+                android:textColor="@color/widget_text_dim"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/widget_water_amount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:fontFamily="sans-serif-medium"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/widget_text"
+                android:textSize="20sp" />
         </LinearLayout>
     </LinearLayout>
 
-    <!-- 按鈕列固定 44dp：高度不夠時讓上半部先擠，按鈕一定要留得住且按得到 -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="32dp"
         android:layout_marginTop="6dp"
         android:baselineAligned="false"
         android:orientation="horizontal">
 
-        <TextView
+        <LinearLayout
             android:id="@+id/widget_add_water"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_marginEnd="8dp"
             android:layout_weight="1"
-            android:background="@drawable/bite_widget_button"
+            android:background="@drawable/bite_widget_pill_water"
             android:gravity="center"
-            android:text="@string/widget_add_water"
-            android:textColor="@color/widget_text"
-            android:textSize="14sp" />
+            android:orientation="horizontal">
 
-        <TextView
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_widget_drop" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/widget_add_water"
+                android:textColor="@color/widget_water"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/widget_log_meal"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:background="@drawable/bite_widget_button"
+            android:background="@drawable/bite_widget_pill_kcal"
             android:gravity="center"
-            android:text="@string/widget_log_meal"
-            android:textColor="@color/widget_text"
-            android:textSize="14sp" />
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_widget_meal" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="@string/widget_log_meal"
+                android:textColor="@color/widget_kcal"
+                android:textSize="14sp" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

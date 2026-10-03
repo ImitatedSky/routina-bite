@@ -1,24 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-  1×1：這個小工具的主角是「今天已經吃了多少」，所以只留那個數字。
--->
+<!-- 營養 1×1：三大營養素的組成環，中間是今天已吃的熱量 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/macro_widget_root"
+    android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bite_widget_background"
-    android:padding="0dp">
+    android:padding="6dp">
 
-    <!-- textSize 只是預覽用的值，實際字級由 provider 依位數決定（tinyTextSp） -->
-    <TextView
-        android:id="@+id/macro_widget_kcal"
+    <ImageView
+        android:id="@+id/macro_widget_ring"
         android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:ellipsize="end"
-        android:gravity="center"
-        android:includeFontPadding="false"
-        android:maxLines="1"
-        android:textColor="@color/widget_text"
-        android:textSize="20sp" />
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/macro_widget_kcal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="sans-serif-medium"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:textColor="@color/widget_text"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/macro_widget_kcal_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:includeFontPadding="false"
+            android:maxLines="1"
+            android:text="@string/macro_widget_eaten"
+            android:textColor="@color/widget_text_dim"
+            android:textSize="9sp" />
+    </LinearLayout>
 </FrameLayout>

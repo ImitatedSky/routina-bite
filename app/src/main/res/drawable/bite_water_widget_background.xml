@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 小工具的圓角，配上按鈕的填色與外框：整塊都按得下去 -->
+<!-- 喝水小工具整塊是一顆按鈕，底色用水的淡色，和另外兩塊「點了開 App」的奶油底分得開 -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <corners android:radius="16dp" />
-    <solid android:color="@color/widget_button_fill" />
-    <stroke
-        android:width="1dp"
-        android:color="@color/widget_button_stroke" />
+    <corners android:radius="@dimen/widget_radius" />
+    <solid android:color="@color/widget_water_container" />
 </shape>

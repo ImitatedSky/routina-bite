@@ -10,13 +10,25 @@
     <color name="widget_background">#FBF4E2</color>
     <color name="widget_text">#2B2823</color>
     <color name="widget_text_dim">#6E675A</color>
-    <color name="widget_track">#E7DCC4</color>
-    <!-- 熱量用家族主色，與 FamilyColors.Primary 同值 -->
-    <color name="widget_kcal">#4B5699</color>
-    <!-- 喝水：低飽和的偏青藍，與主色（靛藍）和三大營養素色都分得開 -->
-    <color name="widget_water">#4C87A8</color>
-    <color name="widget_button_fill">#F3E9D2</color>
-    <color name="widget_button_stroke">#D6C7A6</color>
+    <!-- 熱量用啟動圖示上那團火焰的珊瑚色：小工具就擺在圖示旁邊，兩者同色才像一家人 -->
+    <color name="widget_kcal">#B95A46</color>
+    <!-- 喝水：低飽和的偏青藍 -->
+    <color name="widget_water">#3F7FA3</color>
+    <!-- 膠囊按鈕與喝水小工具的底：主色的淡版 -->
+    <color name="widget_kcal_container">#F7E1D6</color>
+    <color name="widget_water_container">#DCEBF2</color>
+
+    <!--
+      圓環的顏色（WidgetRings.kt 畫成 Bitmap）。Bitmap 在畫的當下就定色，之後切深色模式不會重畫，
+      所以這幾個刻意不在 values-night 覆寫，選的是在奶油底與深色底上都看得清楚的中間值。
+    -->
+    <color name="widget_ring_kcal">#E07B67</color>
+    <color name="widget_ring_kcal_over">#C8503A</color>
+    <color name="widget_ring_water">#5A9CC2</color>
+    <color name="widget_ring_track">#A89A80</color>
+    <color name="widget_ring_protein">#5E9E8C</color>
+    <color name="widget_ring_fat">#D69A63</color>
+    <color name="widget_ring_carbs">#9A8AC8</color>
 
     <!-- 三大營養素，與 App 內的 MacroColors 同值 -->
     <color name="widget_macro_protein">#4E8A7B</color>

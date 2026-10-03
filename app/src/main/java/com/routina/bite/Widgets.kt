@@ -5,6 +5,9 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.RelativeSizeSpan
 import com.routina.bite.data.entriesOn
 import com.routina.bite.data.todayDate
 import com.routina.bite.data.totalOf
@@ -76,22 +79,33 @@ fun widgetToday(context: Context): WidgetToday {
     )
 }
 
+/** 圓環要畫幾成滿：超過目標就是滿圈，吃超過由文字「超過了」講 */
+fun widgetFraction(value: Int, target: Int): Float =
+    if (target <= 0) 0f else (value.toFloat() / target).coerceIn(0f, 1f)
+
 /**
- * 1×1 上那個數字要用多大的字。
+ * 1×1 的圓環實際有多大（dp）。環以 fitCenter 撐滿格子，所以是格子的短邊扣掉內距；
+ * 中間數字的字級要靠這個算。讀不到尺寸時用一般桌面一格的大小。
  *
- * 固定 20sp 時「1832」這種四位數會超過一格的寬度、被裁成「183…」——1×1 只剩一個數字，
- * 那個數字再被裁掉就什麼都不剩了。RemoteViews 上的 autoSizeTextType 不是每個版本都吃，
- * 所以自己依長度分段（負號也算一位，所以吃超標的「-432」走四位數那段）。
+ * 扣的是最壞情況：我們自己的 6dp，加上 Android 11 以下桌面每邊再塞的 8dp。
+ * 算小了只是字小一號；算大了數字會壓到環上。
  */
-fun tinyTextSp(text: String): Float = when {
-    text.length <= 3 -> 22f
-    text.length == 4 -> 18f
-    else -> 15f
+fun tinyRingDp(options: Bundle?): Int {
+    val width = widgetWidthDp(options)
+    val height = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0) ?: 0
+    if (width <= 0 || height <= 0) return 48
+    return (minOf(width, height) - 28).coerceIn(28, 120)
 }
 
-/** 進度條最多滿格；吃超過由「剩餘」的負數表示 */
-fun widgetPercent(value: Int, target: Int): Int =
-    if (target <= 0) 0 else (value * 100 / target).coerceIn(0, 100)
+/** 環太小時，數字底下那行小標籤擠不進內圈，乾脆不放 */
+fun ringHasRoomForLabel(ringDp: Int): Boolean = ringDp >= 44
+
+/** 「500 / 2000 ml」這種：前面的數字大、後面的目標與單位縮小，一眼先看到重點 */
+fun bigThenSmall(big: String, small: String): CharSequence {
+    val text = SpannableString(big + small)
+    text.setSpan(RelativeSizeSpan(0.55f), big.length, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    return text
+}
 
 /**
  * 開 App 的 PendingIntent。

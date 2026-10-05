@@ -79,12 +79,10 @@ private fun buildWaterWidget(context: Context, options: Bundle?): RemoteViews {
 
     val views = if (widgetSizeOf(options) == WidgetSize.TINY) {
         val ringDp = tinyRingDp(options)
+        val numberSp = ringCenterTextSp(context.getString(R.string.water_widget_add), ringDp)
         RemoteViews(context.packageName, R.layout.bite_water_widget).apply {
-            setTextViewTextSize(
-                R.id.water_widget_add,
-                TypedValue.COMPLEX_UNIT_SP,
-                ringCenterTextSp(context.getString(R.string.water_widget_add), ringDp)
-            )
+            setTextViewTextSize(R.id.water_widget_add, TypedValue.COMPLEX_UNIT_SP, numberSp)
+            setTextViewTextSize(R.id.water_widget_total, TypedValue.COMPLEX_UNIT_SP, ringLabelSp(numberSp))
             setTextViewText(
                 R.id.water_widget_total,
                 context.getString(R.string.water_widget_tiny_total, today.water)
@@ -96,19 +94,20 @@ private fun buildWaterWidget(context: Context, options: Bundle?): RemoteViews {
         }
     } else {
         val left = today.targets.water - today.water
-        // 2×1 只放得下「500 / 2000 ml」，夠寬才把還差多少講出來
-        val wide = widgetWidthDp(options) >= WIDGET_WIDE_DP
+        val sentence = if (left <= 0) {
+            context.getString(R.string.water_widget_done, today.water, today.targets.water)
+        } else {
+            context.getString(R.string.water_widget_left, today.water, today.targets.water, left)
+        }
+        // 放得下整句「今天 500 / 2000 · 還差 1500」就講完整，不然只放「500 / 2000 ml」
+        val room = contentWidthDp(options, 24) - 36 - 10
+        val status = if (textWidthDp(context, sentence, 11f) <= room) {
+            sentence
+        } else {
+            context.getString(R.string.water_widget_total, today.water, today.targets.water)
+        }
         RemoteViews(context.packageName, R.layout.bite_water_widget_wide).apply {
-            setTextViewText(
-                R.id.water_widget_total,
-                if (!wide) {
-                    context.getString(R.string.water_widget_total, today.water, today.targets.water)
-                } else if (left <= 0) {
-                    context.getString(R.string.water_widget_done, today.water, today.targets.water)
-                } else {
-                    context.getString(R.string.water_widget_left, today.water, today.targets.water, left)
-                }
-            )
+            setTextViewText(R.id.water_widget_total, status)
         }
     }
     views.setImageViewBitmap(R.id.water_widget_ring, ring)

@@ -73,6 +73,7 @@
                 android:src="@drawable/bite_widget_dot_protein" />
 
             <TextView
+                android:id="@+id/macro_widget_protein_label"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
@@ -106,6 +107,7 @@
                 android:src="@drawable/bite_widget_dot_fat" />
 
             <TextView
+                android:id="@+id/macro_widget_fat_label"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
@@ -139,6 +141,7 @@
                 android:src="@drawable/bite_widget_dot_carbs" />
 
             <TextView
+                android:id="@+id/macro_widget_carbs_label"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"

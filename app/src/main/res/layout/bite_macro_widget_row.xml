@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  營養 矮而寬：小組成環＋已吃熱量，夠寬（4 格）再排出三個營養素的公克數，各帶一個色點。
-  2×1 只留熱量：實測 150dp 硬塞三個營養素會被裁到認不出是哪一個。
+  營養 矮而寬：小組成環＋已吃熱量，放得下再排出三個營養素，各帶一個色點。
+  營養素放「蛋白 30」還是只放「30」、或乾脆不放，由 provider 估字寬決定。
+  只有熱量一組時整組置中，兩組時中間的 spacer 把它們推到兩邊。
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@android:id/background"
@@ -9,7 +10,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/bite_widget_background"
     android:baselineAligned="false"
-    android:gravity="center_vertical"
+    android:gravity="center"
     android:orientation="horizontal"
     android:paddingStart="10dp"
     android:paddingTop="4dp"
@@ -49,13 +50,18 @@
             android:textSize="20sp" />
     </LinearLayout>
 
+    <FrameLayout
+        android:id="@+id/macro_widget_spacer"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:layout_weight="1" />
+
     <LinearLayout
         android:id="@+id/macro_widget_macros"
-        android:layout_width="0dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="12dp"
-        android:layout_weight="1"
-        android:gravity="end|center_vertical"
+        android:gravity="center_vertical"
         android:orientation="horizontal">
 
         <ImageView

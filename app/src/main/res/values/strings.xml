@@ -275,6 +275,10 @@
 
     <!-- 小工具縮到一格高時的窄版文字 -->
     <string name="macro_widget_row_grams">%1$.0f</string>
+    <!-- 一格高的營養小工具放得下名稱時用的短名 -->
+    <string name="macro_short_protein">蛋白</string>
+    <string name="macro_short_fat">脂肪</string>
+    <string name="macro_short_carbs">碳水</string>
 
     <!-- 喝水小工具 -->
     <string name="water_widget_description">點一下就記 250 ml 水，不開畫面；下面一行是今天的累計</string>

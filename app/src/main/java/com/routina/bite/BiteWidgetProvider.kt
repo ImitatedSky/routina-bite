@@ -11,6 +11,7 @@ import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import kotlin.math.abs
+import kotlin.math.max
 
 /**
  * 桌面小工具：今天還剩多少大卡、喝了多少水，加上「+250 水」與「記一餐」兩顆按鈕。
@@ -80,8 +81,8 @@ fun updateWidgets(context: Context) {
 private fun buildWidget(context: Context, options: Bundle?): RemoteViews =
     when (widgetSizeOf(options)) {
         WidgetSize.TINY -> buildTiny(context, tinyRingDp(options))
-        WidgetSize.ROW -> buildRow(context, widgetWidthDp(options))
-        WidgetSize.FULL -> buildFull(context)
+        WidgetSize.ROW -> buildRow(context, options)
+        WidgetSize.FULL -> buildFull(context, options)
     }
 
 /** 1×1：一個熱量環，中間是還能吃多少（吃超過就是超過多少） */
@@ -90,8 +91,10 @@ private fun buildTiny(context: Context, ringDp: Int): RemoteViews {
     val views = RemoteViews(context.packageName, R.layout.bite_widget_tiny)
     views.setImageViewBitmap(R.id.widget_ring, kcalRing(context, today))
     val text = remainingText(today)
+    val numberSp = ringCenterTextSp(text, ringDp)
     views.setTextViewText(R.id.widget_remaining, text)
-    views.setTextViewTextSize(R.id.widget_remaining, TypedValue.COMPLEX_UNIT_SP, ringCenterTextSp(text, ringDp))
+    views.setTextViewTextSize(R.id.widget_remaining, TypedValue.COMPLEX_UNIT_SP, numberSp)
+    views.setTextViewTextSize(R.id.widget_remaining_label, TypedValue.COMPLEX_UNIT_SP, ringLabelSp(numberSp))
     views.setTextViewText(
         R.id.widget_remaining_label,
         context.getString(if (isOver(today)) R.string.widget_over else R.string.widget_remaining)
@@ -104,33 +107,59 @@ private fun buildTiny(context: Context, ringDp: Int): RemoteViews {
     return views
 }
 
-/** 矮而寬：高度只有一格，放按鈕會把數字擠掉，所以只顯示不動作 */
-private fun buildRow(context: Context, widthDp: Int): RemoteViews {
+/**
+ * 矮而寬：高度只有一格，放按鈕會把數字擠掉，所以只顯示不動作。
+ * 喝水那一組放不放、放多少，看實際剩下的寬度：
+ * 放得下「500 / 2000」就放完整的，不然只放「500」，再不然就只有熱量一組（版面會把它置中）。
+ */
+private fun buildRow(context: Context, options: Bundle?): RemoteViews {
     val today = widgetToday(context)
     val views = RemoteViews(context.packageName, R.layout.bite_widget_row)
+    val label = remainingLabel(context, today)
+    val number = remainingText(today)
     views.setImageViewBitmap(R.id.widget_ring, kcalRing(context, today))
-    views.setTextViewText(R.id.widget_remaining_label, remainingLabel(context, today))
-    views.setTextViewText(R.id.widget_remaining, remainingText(today))
-    // 2×1 的寬度只夠熱量那一組，喝水要 4×1 才擠得下
-    val showWater = widthDp >= WIDGET_WIDE_DP
-    views.setViewVisibility(R.id.widget_water_group, if (showWater) View.VISIBLE else View.GONE)
-    if (showWater) {
+    views.setTextViewText(R.id.widget_remaining_label, label)
+    views.setTextViewText(R.id.widget_remaining, number)
+
+    val room = contentWidthDp(options, ROW_PADDING_DP)
+    val kcalGroup = ROW_RING_DP + 10 +
+        max(textWidthDp(context, label, 11f), textWidthDp(context, number, 20f))
+    val waterNumber = today.water.toString()
+    val waterTarget = " / ${today.targets.water}"
+    val waterGroup = ROW_GROUP_GAP_DP + ROW_RING_DP + 8 + textWidthDp(context, waterNumber, 16f)
+    val waterText: CharSequence? = when {
+        kcalGroup + waterGroup + textWidthDp(context, waterTarget, 16f * 0.55f) <= room ->
+            bigThenSmall(waterNumber, waterTarget)
+        kcalGroup + waterGroup <= room -> waterNumber
+        else -> null
+    }
+
+    val waterVisibility = if (waterText != null) View.VISIBLE else View.GONE
+    views.setViewVisibility(R.id.widget_water_group, waterVisibility)
+    views.setViewVisibility(R.id.widget_row_spacer, waterVisibility)
+    if (waterText != null) {
         views.setImageViewBitmap(R.id.widget_water_ring, waterRing(context, today))
-        views.setTextViewText(
-            R.id.widget_water_amount,
-            bigThenSmall(today.water.toString(), " / ${today.targets.water}")
-        )
+        views.setTextViewText(R.id.widget_water_amount, waterText)
     }
     views.setOnClickPendingIntent(android.R.id.background, openTodayIntent(context))
     return views
 }
 
-private fun buildFull(context: Context): RemoteViews {
+private fun buildFull(context: Context, options: Bundle?): RemoteViews {
     val today = widgetToday(context)
     val views = RemoteViews(context.packageName, R.layout.bite_widget)
+
+    // 兩欄各是「環 40 + 間距 + 一欄字」；算出一欄字能用多寬，數字放不下就縮一點
+    val columnText = (contentWidthDp(options, FULL_PADDING_DP) - 2 * 40 - 28) / 2
+    val number = remainingText(today)
     views.setImageViewBitmap(R.id.widget_ring, kcalRing(context, today))
     views.setTextViewText(R.id.widget_remaining_label, remainingLabel(context, today))
-    views.setTextViewText(R.id.widget_remaining, remainingText(today))
+    views.setTextViewText(R.id.widget_remaining, number)
+    views.setTextViewTextSize(
+        R.id.widget_remaining,
+        TypedValue.COMPLEX_UNIT_SP,
+        fitTextSp(context, number, columnText, 20f, 14f)
+    )
 
     views.setImageViewBitmap(R.id.widget_water_ring, waterRing(context, today))
     views.setTextViewText(
@@ -140,10 +169,14 @@ private fun buildFull(context: Context): RemoteViews {
             else R.string.widget_water_label
         )
     )
+    // 欄夠寬就連目標一起寫「500 / 2000 ml」，不然只寫「500 ml」，喝了幾成交給圓環
+    val waterNumber = today.water.toString()
+    val waterFull = " / ${today.targets.water} ml"
+    val fitsTarget = textWidthDp(context, waterNumber, 20f) +
+        textWidthDp(context, waterFull, 20f * 0.55f) <= columnText
     views.setTextViewText(
         R.id.widget_water_amount,
-        // 欄寬只夠一個數字；喝了幾成由旁邊的圓環表示
-        bigThenSmall(today.water.toString(), " ml")
+        bigThenSmall(waterNumber, if (fitsTarget) waterFull else " ml")
     )
 
     views.setOnClickPendingIntent(android.R.id.background, openTodayIntent(context))
@@ -154,6 +187,9 @@ private fun buildFull(context: Context): RemoteViews {
     )
     return views
 }
+
+/** bite_widget.xml 的左右內距：外框 8×2 加上排 2×2 */
+private const val FULL_PADDING_DP = 20
 
 private fun isOver(today: WidgetToday): Boolean = today.kcal > today.targets.kcal
 

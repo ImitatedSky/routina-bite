@@ -105,5 +105,5 @@ fun ringCenterTextSp(text: String, ringDp: Int): Float {
     val inner = ringDp * (1 - STROKE_RATIO * 2)
     // 數字的平均字寬約 0.58 個字級；留四分之一給左右邊距，數字才不會貼著環
     val fit = inner * 0.75f / (0.58f * text.length.coerceAtLeast(1))
-    return fit.coerceIn(9f, 22f)
+    return fit.coerceIn(9f, 40f)
 }

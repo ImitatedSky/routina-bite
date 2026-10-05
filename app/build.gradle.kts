@@ -37,8 +37,8 @@ android {
         applicationId = "com.routina.bite"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 17
-        versionName = "0.15.0"
+        versionCode = 18
+        versionName = "0.15.1"
 
         vectorDrawables {
             useSupportLibrary = true

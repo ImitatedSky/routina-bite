@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -35,11 +37,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,12 +54,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.routina.bite.R
 import com.routina.bite.data.defaultMeal
 import com.routina.bite.data.entriesOn
+import com.routina.bite.data.parseDate
+import com.routina.bite.data.shiftDate
 import com.routina.bite.data.todayDate
 import com.routina.bite.data.totalOf
 import com.routina.bite.model.DiaryEntry
 import com.routina.bite.model.Meal
 import com.routina.bite.model.Targets
 import com.routina.bite.ui.theme.MacroColors
+import java.time.temporal.ChronoUnit
+import kotlin.math.abs
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -74,9 +82,30 @@ fun TodayScreen(
     val targets by viewModel.targets.collectAsStateWithLifecycle()
     val waterDays by viewModel.water.collectAsStateWithLifecycle()
 
-    val entries = entriesOn(allEntries, date)
+    // 左右滑換天：每一頁是一天。頁碼與日期的對照以「打開這個畫面那天」為中心，
+    // 往前往後各留 DAY_PAGES / 2 天，夠滑幾十年
+    val baseDate = remember { todayDate() }
+    val pagerState = rememberPagerState(initialPage = pageOf(baseDate, date)) { DAY_PAGES }
+
+    // 滑完停在哪一頁，那一頁的日期就是選中的日期（新增、喝水、備註都跟著它走）
+    LaunchedEffect(pagerState) {
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            viewModel.selectDate(dateOfPage(baseDate, page))
+        }
+    }
+    // 反過來：按箭頭、「回到今天」、從歷史頁選了一天，翻到那一頁。
+    // 隔太遠就直接跳過去，不然會看到一路翻過幾百頁
+    LaunchedEffect(date) {
+        val target = pageOf(baseDate, date)
+        if (target == pagerState.currentPage) return@LaunchedEffect
+        if (abs(target - pagerState.currentPage) <= 3) {
+            pagerState.animateScrollToPage(target)
+        } else {
+            pagerState.scrollToPage(target)
+        }
+    }
+
     val note = dayNotes.firstOrNull { it.date == date }?.note.orEmpty()
-    val water = waterDays.firstOrNull { it.date == date }?.ml ?: 0
 
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -115,86 +144,96 @@ fun TodayScreen(
         },
         snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(padding),
-            // 底部留白讓最後一筆不會被 FAB 蓋住
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                DateBar(
-                    date = date,
-                    onPrevious = { viewModel.shiftSelectedDate(-1) },
-                    onNext = { viewModel.shiftSelectedDate(1) },
-                    onToday = { viewModel.backToToday() }
-                )
-            }
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.padding(padding),
+            // 鄰近的頁先組起來，滑的時候旁邊那天已經有內容，不會一片空白再跳出來
+            beyondViewportPageCount = 1
+        ) { page ->
+            val pageDate = dateOfPage(baseDate, page)
+            val entries = entriesOn(allEntries, pageDate)
+            val pageNote = dayNotes.firstOrNull { it.date == pageDate }?.note.orEmpty()
+            val water = waterDays.firstOrNull { it.date == pageDate }?.ml ?: 0
 
-            item { SummaryCard(entries = entries, targets = targets) }
-
-            item {
-                WaterCard(
-                    ml = water,
-                    target = targets.water,
-                    onAdd = { delta -> viewModel.addWater(date, delta) }
-                )
-            }
-
-            item { DayCompositionCard(entries = entries) }
-
-            item {
-                NoteCard(note = note, onClick = { editingNote = true })
-            }
-
-            item {
-                TextButton(onClick = {
-                    val copied = viewModel.copyYesterday(date)
-                    scope.launch {
-                        snackbar.showSnackbar(
-                            if (copied == 0) emptyYesterday else String.format(copiedFormat, copied)
-                        )
-                    }
-                }) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null)
-                    Text(
-                        text = stringResource(R.string.today_copy_yesterday),
-                        modifier = Modifier.padding(start = 8.dp)
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                // 底部留白讓最後一筆不會被 FAB 蓋住
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    DateBar(
+                        date = pageDate,
+                        onPrevious = { viewModel.shiftSelectedDate(-1) },
+                        onNext = { viewModel.shiftSelectedDate(1) },
+                        onToday = { viewModel.backToToday() }
                     )
                 }
-            }
 
-            // 未分餐（匯入的舊資料）只有在有資料時才出現，而且放最前面：
-            // 那種日子四個餐別都是空的，排在後面會讓整天看起來像沒紀錄
-            val unassigned = entries.filter { it.meal == null }
-            if (unassigned.isNotEmpty()) {
-                mealSection(
-                    meal = null,
-                    entries = unassigned,
-                    onAdd = null,
-                    onEdit = { editing = it },
-                    onDelete = { deleting = it }
-                )
-            }
-            // 四個餐別固定顯示（空的也在，才能直接加進那一餐）
-            Meal.entries.forEach { meal ->
-                mealSection(
-                    meal = meal,
-                    entries = entries.filter { it.meal == meal },
-                    onAdd = { onAdd(date, meal) },
-                    onEdit = { editing = it },
-                    onDelete = { deleting = it }
-                )
-            }
+                item { SummaryCard(entries = entries, targets = targets) }
 
-            if (entries.isEmpty()) {
                 item {
-                    Text(
-                        text = stringResource(R.string.today_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    WaterCard(
+                        ml = water,
+                        target = targets.water,
+                        onAdd = { delta -> viewModel.addWater(pageDate, delta) }
                     )
+                }
+
+                item { DayCompositionCard(entries = entries) }
+
+                item {
+                    NoteCard(note = pageNote, onClick = { editingNote = true })
+                }
+
+                item {
+                    TextButton(onClick = {
+                        val copied = viewModel.copyYesterday(pageDate)
+                        scope.launch {
+                            snackbar.showSnackbar(
+                                if (copied == 0) emptyYesterday else String.format(copiedFormat, copied)
+                            )
+                        }
+                    }) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = null)
+                        Text(
+                            text = stringResource(R.string.today_copy_yesterday),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
+                }
+
+                // 未分餐（匯入的舊資料）只有在有資料時才出現，而且放最前面：
+                // 那種日子四個餐別都是空的，排在後面會讓整天看起來像沒紀錄
+                val unassigned = entries.filter { it.meal == null }
+                if (unassigned.isNotEmpty()) {
+                    mealSection(
+                        meal = null,
+                        entries = unassigned,
+                        onAdd = null,
+                        onEdit = { editing = it },
+                        onDelete = { deleting = it }
+                    )
+                }
+                // 四個餐別固定顯示（空的也在，才能直接加進那一餐）
+                Meal.entries.forEach { meal ->
+                    mealSection(
+                        meal = meal,
+                        entries = entries.filter { it.meal == meal },
+                        onAdd = { onAdd(pageDate, meal) },
+                        onEdit = { editing = it },
+                        onDelete = { deleting = it }
+                    )
+                }
+
+                if (entries.isEmpty()) {
+                    item {
+                        Text(
+                            text = stringResource(R.string.today_empty),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
@@ -232,6 +271,15 @@ fun TodayScreen(
         )
     }
 }
+
+/** 左右滑換天的總頁數；中間那頁是打開畫面那天 */
+private const val DAY_PAGES = 20_000
+
+private fun pageOf(baseDate: String, date: String): Int =
+    DAY_PAGES / 2 + ChronoUnit.DAYS.between(parseDate(baseDate), parseDate(date)).toInt()
+
+private fun dateOfPage(baseDate: String, page: Int): String =
+    shiftDate(baseDate, (page - DAY_PAGES / 2).toLong())
 
 @Composable
 private fun DateBar(

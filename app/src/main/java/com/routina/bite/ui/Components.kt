@@ -105,8 +105,11 @@ fun NumberField(
     OutlinedTextField(
         value = field,
         onValueChange = { input ->
-            // 濾掉字元會讓游標位置對不上，所以帶了不合法字元就整批拒收
-            if (input.text.all { it.isDigit() || it == '.' }) {
+            // 濾掉字元會讓游標位置對不上，所以帶了不合法字元就整批拒收。
+            // 長度也要擋：幾百位數字會被解析成 Infinity，寫成 JSON 時直接丟例外讓 App 閃退。
+            // 連動算出來的值可能本來就超過上限，所以變短一律放行，不然連刪字都刪不掉
+            val lengthOk = input.text.length <= MAX_NUMBER_LENGTH || input.text.length < field.text.length
+            if (lengthOk && input.text.all { it.isDigit() || it == '.' }) {
                 field = input
                 onValueChange(input.text)
             }
@@ -167,3 +170,6 @@ fun MealPicker(
         }
     }
 }
+
+// 9 位：Int 放得下（目標欄用 toIntOrNull），任何真實的份數、公克、熱量都遠低於它
+private const val MAX_NUMBER_LENGTH = 9

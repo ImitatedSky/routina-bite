@@ -73,11 +73,11 @@ class BiteRepository(context: Context) {
     init {
         // 檔案只有幾百 KB，啟動時同步載入，讓第一幀就有正確資料
         val seeded = loadFoods()
-        val diary = readDiary()
+        val diary = read(diaryFile, DiaryFile.serializer(), DiaryFile())
         _entries.value = diary.entries
         _dayNotes.value = diary.dayNotes
-        _weights.value = readList(weightsFile, ListSerializer(WeightEntry.serializer()))
-        _water.value = readList(waterFile, ListSerializer(WaterDay.serializer()))
+        _weights.value = read(weightsFile, ListSerializer(WeightEntry.serializer()), emptyList())
+        _water.value = read(waterFile, ListSerializer(WaterDay.serializer()), emptyList())
         _targets.value = readTargets()
         _expandedCategories.value = readExpandedCategories()
         // 內建食物庫讀失敗時（理論上不會）不落地空檔，下次啟動還有機會補上
@@ -89,7 +89,7 @@ class BiteRepository(context: Context) {
     /** 回傳 true 表示這次是用內建食物庫開的檔，要把它落地成 foods.json */
     private fun loadFoods(): Boolean {
         if (foodsFile.exists()) {
-            _foods.value = readList(foodsFile, ListSerializer(Food.serializer()))
+            _foods.value = read(foodsFile, ListSerializer(Food.serializer()), emptyList())
             return false
         }
         // 首次啟動才載入內建的食物庫；使用者之後自己刪光就維持空的，不再回填
@@ -103,22 +103,11 @@ class BiteRepository(context: Context) {
         return true
     }
 
-    private fun <T> readList(file: File, serializer: KSerializer<List<T>>): List<T> = try {
-        if (file.exists()) json.decodeFromString(serializer, file.readText()) else emptyList()
+    private fun <T> read(file: File, serializer: KSerializer<T>, empty: T): T = try {
+        if (file.exists()) json.decodeFromString(serializer, file.readText()) else empty
     } catch (t: Throwable) {
         setAside(file)
-        emptyList()
-    }
-
-    private fun readDiary(): DiaryFile = try {
-        if (diaryFile.exists()) {
-            json.decodeFromString(DiaryFile.serializer(), diaryFile.readText())
-        } else {
-            DiaryFile()
-        }
-    } catch (t: Throwable) {
-        setAside(diaryFile)
-        DiaryFile()
+        empty
     }
 
     // 讀不懂的檔先改名留著：不然下一次寫入會用空清單蓋掉它，原本的紀錄就救不回來了
@@ -333,40 +322,22 @@ class BiteRepository(context: Context) {
 
     // ---------- 寫入 ----------
 
+    private fun persistFoods() = persist(foodsFile, ListSerializer(Food.serializer())) { _foods.value }
+
+    private fun persistDiary() = persist(diaryFile, DiaryFile.serializer()) {
+        DiaryFile(entries = _entries.value, dayNotes = _dayNotes.value)
+    }
+
+    private fun persistWater() = persist(waterFile, ListSerializer(WaterDay.serializer())) { _water.value }
+
+    private fun persistWeights() = persist(weightsFile, ListSerializer(WeightEntry.serializer())) { _weights.value }
+
     // 快照在取得鎖之後才讀：若在鎖外先取，兩次連續異動可能以相反順序寫入，
     // 讓較舊的內容蓋掉較新的內容。
-    private fun persistFoods() {
+    private fun <T> persist(file: File, serializer: KSerializer<T>, snapshot: () -> T) {
         scope.launch {
             writeMutex.withLock {
-                val content = json.encodeToString(ListSerializer(Food.serializer()), _foods.value)
-                writeAtomically(foodsFile, content)
-            }
-        }
-    }
-
-    private fun persistDiary() {
-        scope.launch {
-            writeMutex.withLock {
-                val file = DiaryFile(entries = _entries.value, dayNotes = _dayNotes.value)
-                writeAtomically(diaryFile, json.encodeToString(DiaryFile.serializer(), file))
-            }
-        }
-    }
-
-    private fun persistWater() {
-        scope.launch {
-            writeMutex.withLock {
-                val content = json.encodeToString(ListSerializer(WaterDay.serializer()), _water.value)
-                writeAtomically(waterFile, content)
-            }
-        }
-    }
-
-    private fun persistWeights() {
-        scope.launch {
-            writeMutex.withLock {
-                val content = json.encodeToString(ListSerializer(WeightEntry.serializer()), _weights.value)
-                writeAtomically(weightsFile, content)
+                writeAtomically(file, json.encodeToString(serializer, snapshot()))
             }
         }
     }

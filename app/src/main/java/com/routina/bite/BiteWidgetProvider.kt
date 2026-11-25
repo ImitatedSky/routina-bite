@@ -221,11 +221,8 @@ private fun addWaterIntent(context: Context): PendingIntent {
     val intent = Intent(context, ShortcutActivity::class.java)
         .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         .putExtra(ShortcutActivity.EXTRA_ACTION, ShortcutActivity.ACTION_WATER)
-        .putExtra(ShortcutActivity.EXTRA_ML, WATER_ML)
     return PendingIntent.getActivity(context, REQUEST_ADD_WATER, intent, WIDGET_PENDING_FLAGS)
 }
-
-private const val WATER_ML = 250
 
 // requestCode 三個小工具不能互撞，這塊用 1～3
 private const val REQUEST_OPEN_TODAY = 1

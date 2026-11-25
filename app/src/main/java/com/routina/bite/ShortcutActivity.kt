@@ -26,19 +26,19 @@ class ShortcutActivity : Activity() {
 
     private fun run() {
         when (intent?.getStringExtra(EXTRA_ACTION)) {
-            ACTION_WATER -> addWater(intent.getIntExtra(EXTRA_ML, DEFAULT_ML))
+            ACTION_WATER -> addWater()
             ACTION_LOG_FOOD -> logFood(intent.getStringExtra(EXTRA_FOOD_ID))
             else -> toast(getString(R.string.shortcut_unknown))
         }
     }
 
-    private fun addWater(ml: Int) {
+    private fun addWater() {
         val repository = (application as? BiteApp)?.repository ?: return
         // 桌面捷徑的語意就是「現在」，所以一律記在今天，
         // 不能用 App 裡正在看的那一天（使用者可能停在上週某一天）
         val date = todayDate()
-        repository.addWater(date, ml)
-        toast(getString(R.string.shortcut_water_done, ml, repository.waterOn(date), repository.targets.value.water))
+        repository.addWater(date, WATER_ML)
+        toast(getString(R.string.shortcut_water_done, WATER_ML, repository.waterOn(date), repository.targets.value.water))
     }
 
     private fun logFood(foodId: String?) {
@@ -73,15 +73,13 @@ class ShortcutActivity : Activity() {
         /** 這個捷徑要做什麼：[ACTION_WATER] 或 [ACTION_LOG_FOOD] */
         const val EXTRA_ACTION = "com.routina.bite.extra.SHORTCUT_ACTION"
 
-        /** 喝水的毫升數，沒帶就是 [DEFAULT_ML] */
-        const val EXTRA_ML = "com.routina.bite.extra.ML"
-
         /** 要記哪一個食物，值是食物庫的 id */
         const val EXTRA_FOOD_ID = "com.routina.bite.extra.FOOD_ID"
 
         const val ACTION_WATER = "water"
         const val ACTION_LOG_FOOD = "log_food"
 
-        private const val DEFAULT_ML = 250
+        // 固定值，不從 intent 讀：這個跳板是 exported，別的 App 也叫得到
+        private const val WATER_ML = 250
     }
 }

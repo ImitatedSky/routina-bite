@@ -25,8 +25,6 @@ private const val FOOD_ID_PREFIX = "food_"
 private const val ID_WATER = "water_250"
 private const val ID_LOG_MEAL = "log_meal"
 
-private const val WATER_ML = 250
-
 /**
  * 依最近吃的食物重發動態捷徑。食物被刪掉時重算自然就沒有它，對應的捷徑跟著消失。
  *
@@ -77,7 +75,6 @@ fun waterPinShortcut(context: Context): ShortcutInfoCompat =
         .setIntent(
             shortcutIntent(context)
                 .putExtra(ShortcutActivity.EXTRA_ACTION, ShortcutActivity.ACTION_WATER)
-                .putExtra(ShortcutActivity.EXTRA_ML, WATER_ML)
         )
         .build()
 

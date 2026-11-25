@@ -36,9 +36,6 @@
             <extra
                 android:name="com.routina.bite.extra.SHORTCUT_ACTION"
                 android:value="water" />
-            <extra
-                android:name="com.routina.bite.extra.ML"
-                android:value="250" />
         </intent>
     </shortcut>
 

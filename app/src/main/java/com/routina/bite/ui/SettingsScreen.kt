@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -22,7 +23,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,7 +42,12 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.Manifest
+import android.app.NotificationManager
+import android.os.Build
 import com.routina.bite.R
+import com.routina.bite.Reminders
+import java.time.LocalTime
 import com.routina.bite.data.BackupCodec
 import com.routina.bite.data.logMealPinShortcut
 import com.routina.bite.data.waterPinShortcut
@@ -141,6 +150,42 @@ fun SettingsScreen(
                 )
             }
         }
+    }
+
+    var reminderTimes by remember { mutableStateOf(Reminders.times(context)) }
+    var pickingTime by remember { mutableStateOf(false) }
+    val reminderBlocked = stringResource(R.string.reminder_blocked)
+
+    // Android 13 以上第一次加提醒時才問通知權限；拒絕了提醒照樣存，只是提示收不到
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted -> if (!granted) toast(reminderBlocked) }
+
+    fun addReminder(time: LocalTime) {
+        Reminders.add(context, time)
+        reminderTimes = Reminders.times(context)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else if (!context.getSystemService(NotificationManager::class.java).areNotificationsEnabled()) {
+            toast(reminderBlocked)
+        }
+    }
+
+    if (pickingTime) {
+        val state = rememberTimePickerState(initialHour = 12, initialMinute = 0, is24Hour = true)
+        AlertDialog(
+            onDismissRequest = { pickingTime = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    pickingTime = false
+                    addReminder(LocalTime.of(state.hour, state.minute))
+                }) { Text(stringResource(R.string.action_ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pickingTime = false }) { Text(stringResource(R.string.action_cancel)) }
+            },
+            text = { TimePicker(state = state) }
+        )
     }
 
     val versionName = remember {
@@ -265,14 +310,36 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall.zh(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            PinShortcutRow(
+            SettingRow(
                 label = stringResource(R.string.settings_pin_water),
-                onPin = { pinShortcut(waterPinShortcut(context)) }
+                action = stringResource(R.string.action_pin_shortcut),
+                onClick = { pinShortcut(waterPinShortcut(context)) }
             )
-            PinShortcutRow(
+            SettingRow(
                 label = stringResource(R.string.settings_pin_log_meal),
-                onPin = { pinShortcut(logMealPinShortcut(context)) }
+                action = stringResource(R.string.action_pin_shortcut),
+                onClick = { pinShortcut(logMealPinShortcut(context)) }
             )
+
+            HorizontalDivider()
+
+            Text(
+                text = stringResource(R.string.settings_reminders),
+                style = MaterialTheme.typography.titleMedium.zh()
+            )
+            for (hhmm in reminderTimes) {
+                SettingRow(
+                    label = hhmm,
+                    action = stringResource(R.string.action_delete),
+                    onClick = {
+                        Reminders.remove(context, hhmm)
+                        reminderTimes = Reminders.times(context)
+                    }
+                )
+            }
+            OutlinedButton(onClick = { pickingTime = true }) {
+                Text(stringResource(R.string.action_add_reminder))
+            }
 
             HorizontalDivider()
 
@@ -285,9 +352,9 @@ fun SettingsScreen(
     }
 }
 
-/** 一個可以釘到桌面的捷徑：左邊說是哪一個，右邊一顆按鈕 */
+/** 左邊說是哪一個，右邊一顆按鈕（釘到桌面、刪掉提醒） */
 @Composable
-private fun PinShortcutRow(label: String, onPin: () -> Unit) {
+private fun SettingRow(label: String, action: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -298,8 +365,8 @@ private fun PinShortcutRow(label: String, onPin: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium.zh(),
             modifier = Modifier.weight(1f)
         )
-        OutlinedButton(onClick = onPin) {
-            Text(stringResource(R.string.action_pin_shortcut))
+        OutlinedButton(onClick = onClick) {
+            Text(action)
         }
     }
 }

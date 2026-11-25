@@ -2,10 +2,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!--
-      Bite 不需要任何權限：資料全部在 App 私有目錄，
-      備份的匯出／匯入走系統文件選擇器（呼叫端授權單一檔案）。
-      這裡刻意不放 <uses-permission>，安裝時使用者不會看到任何權限請求。
+      記錄提醒（Reminders.kt）才需要的權限：發通知、準時的鬧鐘、開機後把鬧鐘排回來。
+      USE_EXACT_ALARM 在 Android 13 以上安裝時就給；Android 12 沒有它，改用
+      SCHEDULE_EXACT_ALARM（在 12 上預設允許）。和 Routina Words 同一套組合。
+      其餘資料全部在 App 私有目錄，備份走系統文件選擇器，不需要其他權限。
     -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".BiteApp"
@@ -134,6 +141,18 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/bite_water_widget_info" />
+        </receiver>
+
+        <!-- 記錄提醒的鬧鐘，以及開機、更新、改時間後重排。只收系統和自己的廣播 -->
+        <receiver
+            android:name=".ReminderReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
         </receiver>
 
     </application>

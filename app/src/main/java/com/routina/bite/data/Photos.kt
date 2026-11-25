@@ -23,9 +23,13 @@ private const val DIR = "photos"
 
 fun photosDir(context: Context): File = File(context.filesDir, DIR).apply { mkdirs() }
 
-/** 檔名為空或檔案不在就回 null——那一筆就當作沒有照片 */
+/**
+ * 檔名為空或檔案不在就回 null——那一筆就當作沒有照片。
+ * 檔名來自紀錄，紀錄可能來自別人給的備份：帶路徑的（../diary.json）一律不認，
+ * 不然刪紀錄時會刪到資料檔、匯出時會把它當照片打包。
+ */
 fun photoFile(context: Context, name: String): File? {
-    if (name.isEmpty()) return null
+    if (name.isEmpty() || name == ".." || '/' in name || '\\' in name) return null
     return File(photosDir(context), name).takeIf { it.isFile }
 }
 

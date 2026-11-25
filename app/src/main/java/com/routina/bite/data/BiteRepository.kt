@@ -231,8 +231,7 @@ class BiteRepository(context: Context) {
      * 照片不在 JSON 裡，沒人刪就會一直留著。
      */
     fun deletePhoto(name: String) {
-        if (name.isEmpty()) return
-        scope.launch { File(photosDir(appContext), name).delete() }
+        scope.launch { photoFile(appContext, name)?.delete() }
     }
 
     /** 目前所有紀錄用到、而且檔案真的還在的照片（匯出備份時用） */

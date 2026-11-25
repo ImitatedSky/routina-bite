@@ -29,9 +29,12 @@ fun photosDir(context: Context): File = File(context.filesDir, DIR).apply { mkdi
  * 不然刪紀錄時會刪到資料檔、匯出時會把它當照片打包。
  */
 fun photoFile(context: Context, name: String): File? {
-    if (name.isEmpty() || name == ".." || '/' in name || '\\' in name) return null
+    if (!isPlainFileName(name)) return null
     return File(photosDir(context), name).takeIf { it.isFile }
 }
+
+internal fun isPlainFileName(name: String): Boolean =
+    name.isNotEmpty() && name != "." && name != ".." && '/' !in name && '\\' !in name
 
 /**
  * 把選擇器給的圖複製一份進 photos/，縮到長邊 [MAX_EDGE] 並壓成 JPEG。回傳檔名，失敗回 null。

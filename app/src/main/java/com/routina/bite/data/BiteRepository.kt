@@ -313,13 +313,6 @@ class BiteRepository(context: Context) {
         persistWater()
     }
 
-    private fun <T> mergeBy(current: List<T>, incoming: List<T>, key: (T) -> String): List<T> {
-        val byKey = LinkedHashMap<String, T>()
-        current.forEach { byKey[key(it)] = it }
-        incoming.forEach { byKey[key(it)] = it }
-        return byKey.values.toList()
-    }
-
     // ---------- 寫入 ----------
 
     private fun persistFoods() = persist(foodsFile, ListSerializer(Food.serializer())) { _foods.value }
@@ -372,4 +365,12 @@ class BiteRepository(context: Context) {
         const val KEY_EXPANDED_CATEGORIES = "expanded_categories"
         const val NONE_CATEGORY_KEY = "__none__"
     }
+}
+
+/** 依 key 合併：同 key 以 [incoming] 為準，[current] 裡有而 [incoming] 沒有的保留，順序不變 */
+internal fun <T> mergeBy(current: List<T>, incoming: List<T>, key: (T) -> String): List<T> {
+    val byKey = LinkedHashMap<String, T>()
+    current.forEach { byKey[key(it)] = it }
+    incoming.forEach { byKey[key(it)] = it }
+    return byKey.values.toList()
 }

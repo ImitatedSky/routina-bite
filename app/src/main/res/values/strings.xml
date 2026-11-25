@@ -252,6 +252,7 @@
     <string name="action_add_reminder">新增提醒</string>
     <string name="reminder_channel">記錄提醒</string>
     <string name="reminder_title">記一下%1$s</string>
+    <string name="reminder_title_night">記一下今天吃了什麼</string>
     <string name="reminder_blocked">通知被關掉了，到系統設定打開才收得到提醒</string>
     <string name="shortcut_pin_unsupported">這個桌面不支援釘選捷徑，請改用長按 App 圖示</string>
 

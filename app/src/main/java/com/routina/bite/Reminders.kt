@@ -47,13 +47,10 @@ object Reminders {
         for (hhmm in times(context)) schedule(context, hhmm)
     }
 
-    /** 排「下一次」：今天還沒到就今天，過了就明天 */
+    /** 排下一次響的鬧鐘 */
     fun schedule(context: Context, hhmm: String) {
         val time = runCatching { LocalTime.parse(hhmm) }.getOrNull() ?: return
-        val now = LocalDateTime.now()
-        val today = now.toLocalDate().atTime(time)
-        val next = if (today.isAfter(now)) today else today.plusDays(1)
-        val at = next.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val at = nextFire(time, LocalDateTime.now()).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
         val alarms = alarms(context)
         val intent = fireIntent(context, hhmm)
@@ -65,13 +62,13 @@ object Reminders {
         }
     }
 
-    /** 這一餐今天已經記過就不吵；點通知直接開新增紀錄頁 */
+    /** 這一餐今天已經記過就不吵；深夜的提醒不對應哪一餐，一律發。點通知直接開新增紀錄頁 */
     fun post(context: Context, hhmm: String) {
         val time = runCatching { LocalTime.parse(hhmm) }.getOrNull() ?: return
-        val meal = defaultMeal(time)
+        val meal = reminderMeal(time)
         val repository = (context.applicationContext as? BiteApp)?.repository ?: return
         val today = todayDate()
-        if (repository.entries.value.any { it.date == today && it.meal == meal }) return
+        if (meal != null && repository.entries.value.any { it.date == today && it.meal == meal }) return
 
         val manager = context.getSystemService(NotificationManager::class.java)
         if (!manager.areNotificationsEnabled()) return
@@ -87,7 +84,10 @@ object Reminders {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val notification = Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_widget_meal)
-            .setContentTitle(context.getString(R.string.reminder_title, context.getString(mealRes(meal))))
+            .setContentTitle(
+                if (meal == null) context.getString(R.string.reminder_title_night)
+                else context.getString(R.string.reminder_title, context.getString(mealRes(meal)))
+            )
             .setContentIntent(
                 PendingIntent.getActivity(
                     context, 0, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -122,6 +122,25 @@ object Reminders {
 
     private const val NOTIFICATION_ID = 1
 }
+
+/** 下一次響的時間：今天還沒到就今天，到了或過了就明天 */
+fun nextFire(time: LocalTime, now: LocalDateTime): LocalDateTime {
+    val today = now.toLocalDate().atTime(time)
+    return if (today.isAfter(now)) today else today.plusDays(1)
+}
+
+/**
+ * 提醒對應哪一餐，和按 ＋ 時帶入的預設餐別同一套時段。
+ * 21:30–04:00 回 null：那是睡前補記的時間，算成「點心」的話，
+ * 下午記過一份點心就會把它擋掉，標題也會變成莫名其妙的「記一下點心」。
+ */
+fun reminderMeal(time: LocalTime): Meal? {
+    val minutes = time.hour * 60 + time.minute
+    return if (minutes >= NIGHT_START || minutes < NIGHT_END) null else defaultMeal(time)
+}
+
+private const val NIGHT_START = 21 * 60 + 30
+private const val NIGHT_END = 4 * 60
 
 /** 鬧鐘響了就發通知並排明天；開機、App 更新、改時間或時區後鬧鐘會被清掉，全部重排 */
 class ReminderReceiver : BroadcastReceiver() {

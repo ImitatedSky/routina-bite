@@ -29,7 +29,7 @@ import java.io.File
  * - 資料量小（一年約三千筆），整份載進記憶體、整份寫回，不用資料庫
  * - 以 StateFlow 對外，UI 直接 collect
  * - 寫入排在 IO 執行緒、以 Mutex 序列化，並用 tmp + rename 讓檔案不會停在寫到一半的狀態
- * - 檔案損毀無法解析時以空清單啟動，不崩潰
+ * - 檔案損毀無法解析時改名成 *.broken-<時間> 留著，再以空清單啟動，不崩潰
  */
 class BiteRepository(context: Context) {
 
@@ -106,6 +106,7 @@ class BiteRepository(context: Context) {
     private fun <T> readList(file: File, serializer: KSerializer<List<T>>): List<T> = try {
         if (file.exists()) json.decodeFromString(serializer, file.readText()) else emptyList()
     } catch (t: Throwable) {
+        setAside(file)
         emptyList()
     }
 
@@ -116,7 +117,13 @@ class BiteRepository(context: Context) {
             DiaryFile()
         }
     } catch (t: Throwable) {
+        setAside(diaryFile)
         DiaryFile()
+    }
+
+    // 讀不懂的檔先改名留著：不然下一次寫入會用空清單蓋掉它，原本的紀錄就救不回來了
+    private fun setAside(file: File) {
+        file.renameTo(File(file.parentFile, "${file.name}.broken-${System.currentTimeMillis()}"))
     }
 
     private fun readTargets(): Targets {

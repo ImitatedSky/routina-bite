@@ -203,14 +203,16 @@ class BiteViewModel(application: Application) : AndroidViewModel(application) {
 
     fun importBackup(uri: Uri, onDone: (ImportOutcome) -> Unit) {
         viewModelScope.launch {
-            val text = withContext(Dispatchers.IO) { readBackup(uri) }
-            if (text == null) {
+            val read = withContext(Dispatchers.IO) { readBackup(uri) }
+            if (read == null) {
                 onDone(ImportOutcome.Failed(BackupCodec.Reject.UNREADABLE))
                 return@launch
             }
-            when (val parsed = BackupCodec.parse(text)) {
+            when (val parsed = BackupCodec.parse(read.json)) {
                 is BackupCodec.Parsed.Failed -> onDone(ImportOutcome.Failed(parsed.reason))
                 is BackupCodec.Parsed.Ok -> {
+                    // 收了才解壓照片；照片解不出來就當那幾筆沒照片，紀錄照樣匯入
+                    if (read.zip) withContext(Dispatchers.IO) { extractBackupPhotos(uri) }
                     repository.applyBackup(parsed.backup)
                     onDone(
                         ImportOutcome.Ok(
@@ -225,22 +227,30 @@ class BiteViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private class BackupRead(val json: String, val zip: Boolean)
+
     /**
      * 同一個入口要吃得下純 JSON 與帶照片的 zip。
      * 用內容的前兩個 byte 判斷（zip 一定是 PK），不看副檔名——選擇器給的是 URI，副檔名不可靠。
      */
-    private fun readBackup(uri: Uri): String? = runCatching {
+    private fun readBackup(uri: Uri): BackupRead? = runCatching {
         val context = getApplication<Application>()
         context.contentResolver.openInputStream(uri)?.use { raw ->
             val input = BufferedInputStream(raw)
             input.mark(2)
             val zip = input.read() == 'P'.code && input.read() == 'K'.code
             input.reset()
-            if (zip) {
-                BackupArchive.readZip(input, photosDir(context))
-            } else {
-                input.bufferedReader().readText()
-            }
+            val json = if (zip) BackupArchive.readJson(input) else input.bufferedReader().readText()
+            json?.let { BackupRead(it, zip) }
         }
     }.getOrNull()
+
+    private fun extractBackupPhotos(uri: Uri) {
+        runCatching {
+            val context = getApplication<Application>()
+            context.contentResolver.openInputStream(uri)?.use {
+                BackupArchive.extractPhotos(it, photosDir(context))
+            }
+        }
+    }
 }

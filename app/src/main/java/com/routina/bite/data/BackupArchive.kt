@@ -30,24 +30,30 @@ object BackupArchive {
     }
 
     /**
-     * 邊掃邊做：photos/ 底下的直接落地到 [photosDir]（同名覆蓋——檔名是 UUID，同名就是同一張），
-     * backup.json 讀成字串回傳。沒有 backup.json 就回 null，由呼叫端當作讀不懂。
+     * 只讀 backup.json。照片要等備份確定收了才解壓（[extractPhotos]），
+     * 不然被拒收的備份會在 photos/ 留下一堆沒有紀錄指向的檔。
+     * 沒有 backup.json 就回 null，由呼叫端當作讀不懂。
      */
-    fun readZip(input: InputStream, photosDir: File): String? {
-        var json: String? = null
+    fun readJson(input: InputStream): String? {
         ZipInputStream(input).use { zip ->
             while (true) {
                 val entry = zip.nextEntry ?: break
-                val name = entry.name
-                when {
-                    entry.isDirectory -> Unit
-                    name == JSON_ENTRY -> json = zip.readBytes().decodeToString()
-                    name.startsWith(PHOTO_PREFIX) -> extractPhoto(zip, name, photosDir)
-                }
-                zip.closeEntry()
+                if (entry.name == JSON_ENTRY) return zip.readBytes().decodeToString()
             }
         }
-        return json
+        return null
+    }
+
+    /** photos/ 底下的落地到 [photosDir]（同名覆蓋——檔名是 UUID，同名就是同一張） */
+    fun extractPhotos(input: InputStream, photosDir: File) {
+        ZipInputStream(input).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (!entry.isDirectory && entry.name.startsWith(PHOTO_PREFIX)) {
+                    extractPhoto(zip, entry.name, photosDir)
+                }
+            }
+        }
     }
 
     // 檔名只取最後一段：備份是外來檔案，entry 名稱帶 ../ 就會寫到目錄外面去

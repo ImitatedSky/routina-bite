@@ -32,15 +32,35 @@ object Reminders {
     fun times(context: Context): List<String> =
         prefs(context).getStringSet(KEY_TIMES, emptySet()).orEmpty().sorted()
 
-    fun add(context: Context, time: LocalTime) {
+    /** 同一個時間再加一次就是改標題；[title] 留白就用預設標題 */
+    fun add(context: Context, time: LocalTime, title: String = "") {
         val hhmm = "%02d:%02d".format(time.hour, time.minute)
-        prefs(context).edit().putStringSet(KEY_TIMES, times(context).toSet() + hhmm).apply()
+        val edit = prefs(context).edit().putStringSet(KEY_TIMES, times(context).toSet() + hhmm)
+        if (title.isBlank()) edit.remove(titleKey(hhmm)) else edit.putString(titleKey(hhmm), title.trim())
+        edit.apply()
         schedule(context, hhmm)
     }
 
     fun remove(context: Context, hhmm: String) {
-        prefs(context).edit().putStringSet(KEY_TIMES, times(context).toSet() - hhmm).apply()
+        prefs(context).edit()
+            .putStringSet(KEY_TIMES, times(context).toSet() - hhmm)
+            .remove(titleKey(hhmm))
+            .apply()
         alarms(context).cancel(fireIntent(context, hhmm))
+    }
+
+    /** 使用者自己寫的標題，沒寫回空字串 */
+    fun customTitle(context: Context, hhmm: String): String =
+        prefs(context).getString(titleKey(hhmm), null).orEmpty()
+
+    fun defaultTitle(context: Context, time: LocalTime): String {
+        val meal = reminderMeal(time) ?: return context.getString(R.string.reminder_title_night)
+        return context.getString(R.string.reminder_title, context.getString(mealRes(meal)))
+    }
+
+    fun title(context: Context, hhmm: String): String {
+        val time = runCatching { LocalTime.parse(hhmm) }.getOrNull() ?: return ""
+        return customTitle(context, hhmm).ifEmpty { defaultTitle(context, time) }
     }
 
     fun rescheduleAll(context: Context) {
@@ -84,10 +104,7 @@ object Reminders {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         val notification = Notification.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_widget_meal)
-            .setContentTitle(
-                if (meal == null) context.getString(R.string.reminder_title_night)
-                else context.getString(R.string.reminder_title, context.getString(mealRes(meal)))
-            )
+            .setContentTitle(title(context, hhmm))
             .setContentIntent(
                 PendingIntent.getActivity(
                     context, 0, open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -105,6 +122,8 @@ object Reminders {
         Meal.DINNER -> R.string.meal_dinner
         Meal.SNACK -> R.string.meal_snack
     }
+
+    private fun titleKey(hhmm: String) = "title_$hhmm"
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 

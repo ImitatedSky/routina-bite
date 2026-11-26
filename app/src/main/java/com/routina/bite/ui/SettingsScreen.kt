@@ -2,6 +2,7 @@ package com.routina.bite.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -153,7 +155,8 @@ fun SettingsScreen(
     }
 
     var reminderTimes by remember { mutableStateOf(Reminders.times(context)) }
-    var pickingTime by remember { mutableStateOf(false) }
+    // null 是沒開對話框，"" 是新增，其他是正在編輯的那個時間
+    var editingReminder by remember { mutableStateOf<String?>(null) }
     val reminderBlocked = stringResource(R.string.reminder_blocked)
 
     // Android 13 以上第一次加提醒時才問通知權限；拒絕了提醒照樣存，只是提示收不到
@@ -161,9 +164,12 @@ fun SettingsScreen(
         ActivityResultContracts.RequestPermission()
     ) { granted -> if (!granted) toast(reminderBlocked) }
 
-    fun addReminder(time: LocalTime) {
-        Reminders.add(context, time)
+    fun saveReminder(old: String, time: LocalTime, title: String) {
+        // 改了時間就是換一個鬧鐘：舊的要拿掉
+        if (old.isNotEmpty()) Reminders.remove(context, old)
+        Reminders.add(context, time, title)
         reminderTimes = Reminders.times(context)
+        if (old.isNotEmpty()) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         } else if (!context.getSystemService(NotificationManager::class.java).areNotificationsEnabled()) {
@@ -171,20 +177,40 @@ fun SettingsScreen(
         }
     }
 
-    if (pickingTime) {
-        val state = rememberTimePickerState(initialHour = 12, initialMinute = 0, is24Hour = true)
+    editingReminder?.let { old ->
+        val initial = remember(old) { runCatching { LocalTime.parse(old) }.getOrNull() ?: LocalTime.NOON }
+        val state = rememberTimePickerState(initialHour = initial.hour, initialMinute = initial.minute, is24Hour = true)
+        var title by remember(old) { mutableStateOf(if (old.isEmpty()) "" else Reminders.customTitle(context, old)) }
         AlertDialog(
-            onDismissRequest = { pickingTime = false },
+            onDismissRequest = { editingReminder = null },
             confirmButton = {
                 TextButton(onClick = {
-                    pickingTime = false
-                    addReminder(LocalTime.of(state.hour, state.minute))
+                    editingReminder = null
+                    saveReminder(old, LocalTime.of(state.hour, state.minute), title)
                 }) { Text(stringResource(R.string.action_ok)) }
             },
             dismissButton = {
-                TextButton(onClick = { pickingTime = false }) { Text(stringResource(R.string.action_cancel)) }
+                TextButton(onClick = { editingReminder = null }) { Text(stringResource(R.string.action_cancel)) }
             },
-            text = { TimePicker(state = state) }
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    TimePicker(state = state)
+                    // 留白就用預設標題，預設會跟著選的時間換成那一餐
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text(stringResource(R.string.field_reminder_title)) },
+                        placeholder = {
+                            Text(Reminders.defaultTitle(context, LocalTime.of(state.hour, state.minute)))
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
         )
     }
 
@@ -329,15 +355,16 @@ fun SettingsScreen(
             )
             for (hhmm in reminderTimes) {
                 SettingRow(
-                    label = hhmm,
+                    label = "$hhmm  ${Reminders.title(context, hhmm)}",
                     action = stringResource(R.string.action_delete),
                     onClick = {
                         Reminders.remove(context, hhmm)
                         reminderTimes = Reminders.times(context)
-                    }
+                    },
+                    onLabelClick = { editingReminder = hhmm }
                 )
             }
-            OutlinedButton(onClick = { pickingTime = true }) {
+            OutlinedButton(onClick = { editingReminder = "" }) {
                 Text(stringResource(R.string.action_add_reminder))
             }
 
@@ -352,9 +379,9 @@ fun SettingsScreen(
     }
 }
 
-/** 左邊說是哪一個，右邊一顆按鈕（釘到桌面、刪掉提醒） */
+/** 左邊說是哪一個（提醒可點開來改），右邊一顆按鈕（釘到桌面、刪掉提醒） */
 @Composable
-private fun SettingRow(label: String, action: String, onClick: () -> Unit) {
+private fun SettingRow(label: String, action: String, onClick: () -> Unit, onLabelClick: (() -> Unit)? = null) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -363,7 +390,10 @@ private fun SettingRow(label: String, action: String, onClick: () -> Unit) {
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium.zh(),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .then(if (onLabelClick != null) Modifier.clickable(onClick = onLabelClick) else Modifier)
+                .padding(vertical = 8.dp)
         )
         OutlinedButton(onClick = onClick) {
             Text(action)
